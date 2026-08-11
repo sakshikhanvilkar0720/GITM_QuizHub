@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GITM QuizHub</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07080f;--s1:#0d0f1c;--s2:#141729;--bd:#1e2240;
+  --ac:#5b6ef5;--ac2:#f5825b;--ac3:#5bf5c8;
+  --tx:#e8eaf6;--tx2:#8890b5;--tx3:#555e8a;
+  --red:#f55b5b;--grn:#5bf5a0; 
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--ac);border-radius:2px}
+
+/* PAGE SYSTEM - simple block show/hide */
+.page{display:none;width:100%;min-height:100vh;}
+.page.active{display:block;}
+#pg-stu-dash.active,#pg-quiz.active,#pg-admin.active{display:flex;flex-direction:column;}
+
+/* MESH */
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.mesh::before{content:'';position:absolute;width:500px;height:500px;
+  background:radial-gradient(ellipse,rgba(91,110,245,.15) 0%,transparent 70%);
+  top:-100px;left:-100px;animation:d1 18s ease-in-out infinite alternate;}
+.mesh::after{content:'';position:absolute;width:400px;height:400px;
+  background:radial-gradient(ellipse,rgba(245,130,91,.1) 0%,transparent 70%);
+  bottom:-100px;right:-100px;animation:d2 22s ease-in-out infinite alternate;}
+@keyframes d1{to{transform:translate(60px,40px)}}
+@keyframes d2{to{transform:translate(-60px,-40px)}}
+.z{position:relative;z-index:1;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 24px;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;
+  font-size:14px;cursor:pointer;border:none;transition:all .25s;}
+.btn:active{transform:scale(.97);}
+.bp{background:var(--ac);color:#fff;box-shadow:0 4px 18px rgba(91,110,245,.4);}
+.bp:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(91,110,245,.5);}
+.bs{background:var(--s2);color:var(--tx);border:1px solid var(--bd);}
+.bs:hover{border-color:var(--ac);color:var(--ac);}
+.bd{background:rgba(245,91,91,.12);color:var(--red);border:1px solid rgba(245,91,91,.28);}
+.bd:hover{background:rgba(245,91,91,.22);}
+.bg{background:rgba(91,245,160,.12);color:var(--grn);border:1px solid rgba(91,245,160,.28);}
+.bg:hover{background:rgba(91,245,160,.22);}
+.bsm{padding:8px 16px;font-size:12px;border-radius:8px;}
+.bfull{width:100%;}
+
+/* INPUTS */
+.iw{display:flex;flex-direction:column;gap:5px;margin-bottom:15px;}
+.iw label{font-size:11px;font-weight:700;color:var(--tx2);letter-spacing:.06em;text-transform:uppercase;}
+.inp{width:100%;padding:12px 15px;background:var(--s2);border:1.5px solid var(--bd);
+  border-radius:11px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:14px;transition:all .25s;outline:none;}
+.inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(91,110,245,.12);}
+.inp::placeholder{color:var(--tx3);}
+select.inp option{background:var(--s2);}
+textarea.inp{resize:vertical;line-height:1.6;}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:18px;padding:24px;}
+
+/* TAGS */
+.tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;
+  font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;}
+.tblue{background:rgba(91,110,245,.14);color:var(--ac);border:1px solid rgba(91,110,245,.22);}
+.tgreen{background:rgba(91,245,160,.14);color:var(--grn);border:1px solid rgba(91,245,160,.22);}
+.tred{background:rgba(245,91,91,.14);color:var(--red);border:1px solid rgba(245,91,91,.22);}
+.torange{background:rgba(245,130,91,.14);color:var(--ac2);border:1px solid rgba(245,130,91,.22);}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:var(--s2);border:1px solid var(--bd);color:var(--tx);padding:11px 22px;
+  border-radius:12px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;
+  pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:rgba(91,245,160,.4);color:var(--grn);}
+#toast.err{border-color:rgba(245,91,91,.4);color:var(--red);}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(7,8,15,.88);z-index:500;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+.ov.open{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--bd);border-radius:20px;padding:30px;
+  max-width:500px;width:92%;max-height:90vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);}
+
+/* ROLE PAGE */
+.center-wrap{min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:40px 20px;}
+.logo{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;
+  background:linear-gradient(135deg,#fff,var(--ac),var(--ac3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:8px;}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:500px;width:100%;}
+.rc{background:var(--s1);border:1.5px solid var(--bd);border-radius:20px;padding:36px 24px;
+  cursor:pointer;transition:all .25s;text-align:center;}
+.rc:hover{transform:translateY(-4px);}
+.rc.stu:hover{border-color:var(--ac);box-shadow:0 14px 40px rgba(91,110,245,.18);}
+.rc.adm:hover{border-color:var(--ac2);box-shadow:0 14px 40px rgba(245,130,91,.18);}
+.rc-icon{font-size:42px;margin-bottom:12px;display:block;}
+.rc h3{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:4px;}
+.rc p{font-size:12px;color:var(--tx2);}
+
+/* AUTH */
+.scroll-wrap{padding:40px 20px 80px;display:flex;flex-direction:column;align-items:center;}
+.abox{width:100%;max-width:440px;}
+.back-lnk{display:inline-flex;align-items:center;gap:6px;color:var(--tx2);
+  font-size:13px;cursor:pointer;margin-bottom:20px;transition:color .2s;}
+.back-lnk:hover{color:var(--tx);}
+.atabs{display:flex;background:var(--s2);border:1px solid var(--bd);border-radius:12px;
+  padding:4px;gap:4px;margin-bottom:20px;}
+.atab{flex:1;padding:11px 8px;border-radius:9px;text-align:center;font-size:13px;
+  font-weight:700;cursor:pointer;transition:all .25s;color:var(--tx2);font-family:'Syne',sans-serif;}
+.atab.on{background:var(--ac);color:#fff;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:15px 26px;background:var(--s1);border-bottom:1px solid var(--bd);
+  position:sticky;top:0;z-index:50;}
+.tbrand{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;
+  background:linear-gradient(90deg,var(--ac),var(--ac3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.tuser{display:flex;align-items:center;gap:10px;}
+.av{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;
+  background:linear-gradient(135deg,var(--ac),var(--ac3));}
+.av.adm{background:linear-gradient(135deg,var(--ac2),var(--red));}
+
+/* STUDENT DASH */
+.stabs{background:var(--s1);border-bottom:1px solid var(--bd);
+  padding:0 26px;display:flex;gap:0;overflow-x:auto;}
+.stab{padding:13px 18px;font-size:13px;font-weight:600;cursor:pointer;
+  color:var(--tx2);border-bottom:2px solid transparent;transition:all .25s;
+  white-space:nowrap;font-family:'Syne',sans-serif;}
+.stab:hover{color:var(--tx);}
+.stab.on{color:var(--ac);border-bottom-color:var(--ac);}
+.stab-panel{display:none;}
+.stab-panel.on{display:block;}
+.dcontent{flex:1;padding:26px;max-width:1100px;margin:0 auto;width:100%;}
+
+/* STAT CARDS */
+.sgrid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;}
+.ssc{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:16px;
+  text-align:center;position:relative;overflow:hidden;transition:all .25s;}
+.ssc::before{content:'';position:absolute;top:-12px;right:-12px;width:50px;height:50px;
+  border-radius:50%;background:var(--clr,var(--ac));opacity:.13;}
+.ssc:hover{border-color:var(--clr,var(--ac));transform:translateY(-2px);}
+.ssc-icon{font-size:20px;margin-bottom:5px;}
+.ssc-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;
+  color:var(--clr,var(--ac));margin-bottom:2px;}
+.ssc-lbl{font-size:11px;color:var(--tx2);}
+
+/* QUIZ CARDS */
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px;}
+.qcard{background:var(--s1);border:1.5px solid var(--bd);border-radius:15px;padding:18px;
+  cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.qcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--ac),var(--ac3));transform:scaleX(0);
+  transition:transform .3s;transform-origin:left;}
+.qcard:hover{border-color:var(--ac);transform:translateY(-2px);}
+.qcard:hover::after{transform:scaleX(1);}
+.qcard-subj{font-size:10px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--ac);margin-bottom:6px;}
+.qcard-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:8px;}
+.qcard-meta{display:flex;gap:10px;flex-wrap:wrap;}
+.qmeta{font-size:11px;color:var(--tx2);}
+
+/* CHIPS */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.chip{padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;
+  border:1px solid var(--bd);background:var(--s2);color:var(--tx2);transition:all .2s;}
+.chip:hover,.chip.on{background:var(--ac);border-color:var(--ac);color:#fff;}
+
+/* SEARCH */
+.sbar{width:100%;padding:12px 16px;background:var(--s2);border:1.5px solid var(--bd);
+  border-radius:12px;color:var(--tx);font-size:14px;outline:none;transition:all .25s;margin-bottom:14px;}
+.sbar:focus{border-color:var(--ac);}
+.sbar::placeholder{color:var(--tx3);}
+
+/* SEC HEADER */
+.sec-h{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  margin-bottom:13px;display:flex;align-items:center;gap:8px;}
+.sec-h span{width:3px;height:15px;background:var(--ac);border-radius:2px;display:block;}
+
+/* TIP BOX */
+.tip-box{background:linear-gradient(135deg,rgba(91,110,245,.1),rgba(91,245,200,.07));
+  border:1px solid rgba(91,110,245,.2);border-radius:13px;padding:15px 18px;
+  margin-bottom:22px;display:flex;align-items:flex-start;gap:12px;}
+
+/* RESULTS */
+.res-card{background:var(--s1);border:1px solid var(--bd);border-radius:13px;
+  padding:16px 18px;margin-bottom:9px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;}
+
+/* PROGRESS BARS */
+.pbar-wrap{margin-bottom:11px;}
+.pbar-lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.pbar-track{height:7px;background:var(--bd);border-radius:4px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:4px;transition:width .8s ease;}
+
+/* NOTES */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:13px;}
+.nc{background:var(--s1);border:1px solid var(--bd);border-radius:13px;padding:16px;
+  cursor:pointer;transition:all .25s;position:relative;}
+.nc:hover{transform:translateY(-2px);}
+.nc-bar{width:100%;height:3px;border-radius:2px;margin-bottom:11px;}
+.nc-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:5px;}
+.nc-body{font-size:12px;color:var(--tx2);line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.nc-date{font-size:10px;color:var(--tx3);margin-top:9px;}
+.nc-del{position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:5px;
+  background:rgba(245,91,91,.1);border:none;color:var(--red);cursor:pointer;
+  font-size:10px;display:none;align-items:center;justify-content:center;}
+.nc:hover .nc-del{display:flex;}
+.note-color{width:24px;height:24px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:all .2s;}
+.note-color.on{border-color:#fff;transform:scale(1.2);}
+
+/* QUIZ ATTEMPT */
+.qhdr{padding:16px 26px;background:var(--s1);border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.qtitle{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.tbox{display:flex;align-items:center;gap:7px;padding:8px 16px;
+  background:rgba(245,130,91,.1);border:1px solid rgba(245,130,91,.3);
+  border-radius:11px;color:var(--ac2);font-family:'Space Mono',monospace;font-size:14px;font-weight:700;}
+.tbox.red{background:rgba(245,91,91,.14);border-color:rgba(245,91,91,.38);
+  color:var(--red);animation:pulse 1s infinite;}
+@keyframes pulse{50%{opacity:.65}}
+.qprog{padding:12px 26px;background:var(--s2);border-bottom:1px solid var(--bd);}
+.ptrack{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac3));
+  transition:width .4s ease;border-radius:2px;}
+.plbls{font-size:11px;color:var(--tx2);margin-top:6px;display:flex;justify-content:space-between;}
+.dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.dot{width:25px;height:25px;border-radius:6px;background:var(--s1);border:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;cursor:pointer;}
+.dot.ans{background:rgba(91,245,160,.18);border-color:rgba(91,245,160,.38);color:var(--grn);}
+.dot.cur{background:var(--ac);border-color:var(--ac);color:#fff;}
+.qbody{flex:1;padding:34px 26px;max-width:780px;margin:0 auto;width:100%;}
+.qnum{font-size:11px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--ac);font-weight:700;margin-bottom:10px;}
+.qtext{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;
+  line-height:1.55;margin-bottom:24px;}
+.opts{display:flex;flex-direction:column;gap:10px;}
+.opt{padding:14px 17px;background:var(--s1);border:1.5px solid var(--bd);
+  border-radius:12px;cursor:pointer;transition:all .25s;display:flex;
+  align-items:center;gap:12px;font-size:14px;color:var(--tx);}
+.opt:hover{border-color:var(--ac);background:rgba(91,110,245,.06);}
+.opt.sel{background:rgba(91,110,245,.11);border-color:var(--ac);}
+.olet{width:29px;height:29px;border-radius:7px;background:var(--s2);
+  border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;}
+.opt.sel .olet{background:var(--ac);border-color:var(--ac);color:#fff;}
+.qnav{display:flex;gap:10px;margin-top:30px;justify-content:space-between;align-items:center;}
+
+/* ADMIN DASH */
+.alayout{display:flex;flex:1;min-height:0;}
+.sidebar{width:225px;background:var(--s1);border-right:1px solid var(--bd);
+  padding:18px 12px;display:flex;flex-direction:column;gap:3px;flex-shrink:0;overflow-y:auto;}
+.slbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--tx3);font-weight:700;padding:0 10px;margin:13px 0 6px;}
+.ni{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
+  cursor:pointer;transition:all .2s;font-size:13px;color:var(--tx2);}
+.ni:hover{background:var(--s2);color:var(--tx);}
+.ni.on{background:rgba(91,110,245,.14);color:var(--ac);}
+.ni .ic{font-size:14px;width:18px;text-align:center;}
+.amain{flex:1;overflow-y:auto;padding:26px;}
+.asec{display:none;}
+.asec.on{display:block;}
+.asgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin-bottom:24px;}
+.asc{background:var(--s1);border:1px solid var(--bd);border-radius:15px;padding:18px;
+  position:relative;overflow:hidden;}
+.asc::before{content:'';position:absolute;top:-14px;right:-14px;
+  width:65px;height:65px;border-radius:50%;background:var(--clr,var(--ac));opacity:.11;}
+.asv{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:2px;}
+.asl{font-size:11px;color:var(--tx2);}
+.rtable{width:100%;border-collapse:collapse;}
+.rtable th{text-align:left;padding:10px 13px;font-size:10px;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--tx3);border-bottom:1px solid var(--bd);}
+.rtable td{padding:12px 13px;font-size:13px;border-bottom:1px solid rgba(30,34,64,.4);}
+.rtable tr:hover td{background:rgba(255,255,255,.02);}
+.qrow{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:15px 17px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  transition:all .2s;margin-bottom:8px;}
+.qrow:hover{border-color:rgba(91,110,245,.28);}
+.qri h4{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px;}
+.qri p{font-size:11px;color:var(--tx2);}
+.qra{display:flex;gap:6px;flex-shrink:0;}
+
+/* CREATE */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.mcard{background:var(--s1);border:2px solid var(--bd);border-radius:16px;padding:22px;
+  cursor:pointer;transition:all .25s;text-align:center;}
+.mcard:hover,.mcard.sel{border-color:var(--ac);background:rgba(91,110,245,.06);}
+.mcard .mi{font-size:30px;margin-bottom:8px;}
+.mcard h3{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin-bottom:4px;}
+.mcard p{font-size:12px;color:var(--tx2);line-height:1.5;}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+.qbuilder{background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:22px;margin-top:15px;}
+.qi{background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:16px;margin-bottom:11px;}
+.qi-head{font-size:10px;color:var(--ac);font-weight:800;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.rmq{width:22px;height:22px;border-radius:6px;background:rgba(245,91,91,.1);
+  border:1px solid rgba(245,91,91,.24);color:var(--red);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s;}
+.rmq:hover{background:rgba(245,91,91,.2);}
+.ogrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px;}
+.orow{display:flex;align-items:center;gap:6px;}
+.orad{width:15px;height:15px;accent-color:var(--ac);cursor:pointer;flex-shrink:0;}
+.olbl{font-size:10px;color:var(--tx2);font-weight:700;width:13px;flex-shrink:0;}
+.agrids{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:240px;overflow-y:auto;margin-bottom:15px;}
+.achip{padding:8px 11px;background:var(--s2);border:1.5px solid var(--bd);
+  border-radius:8px;font-size:12px;cursor:pointer;transition:all .2s;}
+.achip.sel{background:rgba(91,110,245,.11);border-color:var(--ac);color:var(--ac);}
+.detrow{display:flex;justify-content:space-between;padding:9px 0;
+  border-bottom:1px solid var(--bd);font-size:13px;}
+.detrow:last-child{border-bottom:none;}
+.scbig{font-family:'Syne',sans-serif;font-size:64px;font-weight:800;
+  background:linear-gradient(135deg,var(--ac),var(--ac3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.spin{width:16px;height:16px;border:2px solid rgba(91,110,245,.28);
+  border-top-color:var(--ac);border-radius:50%;animation:spin .75s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:50px 18px;color:var(--tx2);}
+.empty .ei{font-size:40px;margin-bottom:12px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fadeUp .38s ease forwards;}
+
+@media(max-width:760px){
+  .role-grid,.mgrid,.dgrid,.ogrid{grid-template-columns:1fr}
+  .alayout{flex-direction:column}
+  .sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:7px;gap:3px}
+  .slbl{display:none}
+  .dcontent,.amain{padding:14px}
+  .topbar,.qhdr{padding:11px 14px}
+  .qprog,.qbody{padding:11px 14px}
+}
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+
+<!-- PAGE 1: ROLE -->
+<div class="page active z" id="pg-role">
+  <div class="center-wrap">
+    <div class="logo">⚡GITM QuizHub</div>
+    <p style="color:var(--tx2);font-size:15px;margin-bottom:48px;">Next-generation assessment platform</p>
+    <div class="role-grid">
+      <div class="rc stu" id="btn-go-stu">
+        <span class="rc-icon">🎓</span>
+        <h3>Student</h3>
+        <p>Attempt assigned quizzes and track your progress</p>
+      </div>
+      <div class="rc adm" id="btn-go-adm">
+        <span class="rc-icon">🛡️</span>
+        <h3>Admin</h3>
+        <p>Create quizzes, assign and manage results</p>
+      </div>
+    </div>
+    <p style="margin-top:42px;font-size:11px;color:var(--tx3);letter-spacing:.1em;text-transform:uppercase;"></p>
+  </div>
+</div>
+
+<!-- PAGE 2: STUDENT INFO -->
+<div class="page z" id="pg-stu-info">
+  <div class="scroll-wrap">
+    <div class="abox fu">
+      <div class="back-lnk" id="stu-info-back">← Back to roles</div>
+      <div style="margin-bottom:24px;">
+        <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:4px;">👋 Welcome, Scholar</h2>
+        <p style="color:var(--tx2);font-size:14px;">Enter your details to start your session</p>
+      </div>
+      <div class="card">
+        <div class="iw"><label>Full Name</label>
+          <input class="inp" id="sname" type="text" placeholder="e.g. Arjun Sharma" autocomplete="off"/></div>
+        <div class="iw"><label>Roll Number</label>
+          <input class="inp" id="sroll" type="text" placeholder="e.g. CS2024001" autocomplete="off"/></div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:4px;">
+          <button class="btn bp bfull" id="btn-stu-continue">Continue to Dashboard →</button>
+          <button class="btn bs bfull" id="btn-stu-back">← Back to Role Selection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: STUDENT DASHBOARD -->
+<div class="page z" id="pg-stu-dash">
+  <div class="topbar">
+    <div class="tbrand">⚡ GITM QuizHub</div>
+    <div class="tuser">
+      <div style="text-align:right;">
+        <div style="font-size:13px;font-weight:600;" id="s-tname">Student</div>
+        <div style="font-size:11px;color:var(--tx2);" id="s-troll">Roll#</div>
+      </div>
+      <div class="av" id="s-av">S</div>
+      <button class="btn bs bsm" id="btn-stu-home">🏠 Home</button>
+    </div>
+  </div>
+  <div class="stabs">
+    <div class="stab on" data-tab="home">🏠 Dashboard</div>
+    <div class="stab" data-tab="quizzes">📝 My Quizzes</div>
+    <div class="stab" data-tab="results">📊 My Results</div>
+    <div class="stab" data-tab="progress">📈 Progress</div>
+    <div class="stab" data-tab="notes">📓 My Notes</div>
+  </div>
+  <div class="dcontent">
+    <!-- HOME TAB -->
+    <div class="stab-panel on" id="sp-home">
+      <div style="margin-bottom:22px;">
+        <h2 id="s-welcome" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:3px;">Good day! 👋</h2>
+        <p id="s-sub" style="color:var(--tx2);font-size:13px;">Ready to learn something new today?</p>
+      </div>
+      <div class="sgrid4">
+        <div class="ssc" style="--clr:var(--ac)"><div class="ssc-icon">📝</div><div class="ssc-val" id="ss-total">0</div><div class="ssc-lbl">Quizzes Taken</div></div>
+        <div class="ssc" style="--clr:var(--grn)"><div class="ssc-icon">✅</div><div class="ssc-val" id="ss-passed">0</div><div class="ssc-lbl">Passed</div></div>
+        <div class="ssc" style="--clr:var(--ac2)"><div class="ssc-icon">🎯</div><div class="ssc-val" id="ss-avg">—</div><div class="ssc-lbl">Avg Score</div></div>
+        <div class="ssc" style="--clr:var(--ac3)"><div class="ssc-icon">🏆</div><div class="ssc-val" id="ss-best">—</div><div class="ssc-lbl">Best Score</div></div>
+      </div>
+      <div class="tip-box">
+        <div style="font-size:26px;flex-shrink:0;">💡</div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:3px;color:var(--ac3);">Study Tip of the Day</div>
+          <div id="tip-text" style="font-size:13px;color:var(--tx2);line-height:1.6;"></div>
+        </div>
+      </div>
+      <div class="sec-h"><span></span>Available Quizzes</div>
+      <input class="sbar" id="s-search" placeholder="🔍 Search quizzes…" type="text"/>
+      <div class="chips" id="chips"></div>
+      <div class="qgrid" id="stu-qlist"></div>
+    </div>
+    <!-- QUIZZES TAB -->
+    <div class="stab-panel" id="sp-quizzes">
+      <div class="sec-h"><span></span>All Assigned Quizzes</div>
+      <div class="qgrid" id="stu-allquiz"></div>
+    </div>
+    <!-- RESULTS TAB -->
+    <div class="stab-panel" id="sp-results">
+      <div class="sec-h"><span></span>My Quiz History</div>
+      <div id="stu-res-list"></div>
+    </div>
+    <!-- PROGRESS TAB -->
+    <div class="stab-panel" id="sp-progress">
+      <div class="sec-h"><span></span>Performance Analytics</div>
+      <div style="font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Subject-wise Average</div>
+      <div id="subj-bars" style="margin-bottom:22px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Pass vs Fail</div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div id="pf-ring" style="width:72px;height:72px;border-radius:50%;flex-shrink:0;background:var(--bd);"></div>
+            <div id="pf-legend"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Activity by Subject</div>
+          <div id="activity-chart"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">Score Trend (Last 5)</div>
+        <div id="trend-chart"></div>
+      </div>
+    </div>
+    <!-- NOTES TAB -->
+    <div class="stab-panel" id="sp-notes">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div class="sec-h" style="margin:0;"><span></span>My Study Notes</div>
+        <button class="btn bp bsm" id="btn-new-note">+ New Note</button>
+      </div>
+      <p style="font-size:12px;color:var(--tx3);margin-bottom:14px;">📌 Notes are saved privately on this device.</p>
+      <div class="notes-grid" id="notes-grid"></div>
+      <div id="notes-empty" class="empty"><div class="ei">📓</div><div style="font-weight:600;margin-bottom:5px;">No notes yet</div><div style="font-size:13px;">Click "+ New Note" to start</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4: QUIZ -->
+<div class="page z" id="pg-quiz">
+  <div class="qhdr">
+    <div>
+      <div style="font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Attempting</div>
+      <div class="qtitle" id="qa-title">—</div>
+    </div>
+    <div class="tbox" id="qa-timer">⏱ 00:00</div>
+  </div>
+  <div class="qprog">
+    <div class="ptrack"><div class="pfill" id="q-pfill" style="width:0%"></div></div>
+    <div class="plbls"><span id="q-ptext">Q 0/0</span><span id="q-pans">0 answered</span></div>
+    <div class="dots" id="q-dots"></div>
+  </div>
+  <div class="qbody">
+    <div class="qnum" id="q-num">Question 1</div>
+    <div class="qtext" id="q-text">Loading…</div>
+    <div class="opts" id="q-opts"></div>
+    <div class="qnav">
+      <button class="btn bs" id="btn-prev">← Previous</button>
+      <button class="btn bs" id="btn-next">Next →</button>
+      <button class="btn bg" id="btn-sub" style="display:none;">✅ Submit Quiz</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5: ADMIN LOGIN -->
+<div class="page z" id="pg-admin-login">
+  <div class="scroll-wrap">
+    <div class="abox">
+      <div class="back-lnk" id="admin-login-back">← Back to roles</div>
+      <div style="margin-bottom:22px;">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+          background:linear-gradient(90deg,var(--ac),var(--ac3));
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+          background-clip:text;margin-bottom:5px;">⚡ GITM QuizHub</div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:4px;">Admin Portal 🛡️</h2>
+        <p style="color:var(--tx2);font-size:14px;">Sign in or create a new admin account</p>
+      </div>
+      <div class="atabs">
+        <div class="atab on" id="tab-in">🔑 Sign In</div>
+        <div class="atab" id="tab-reg">📝 Register</div>
+      </div>
+      <!-- SIGN IN -->
+      <div id="f-in" class="card fu">
+        <div id="no-adm-banner" style="display:none;font-size:12px;color:var(--ac2);
+          background:rgba(245,130,91,.08);border:1px solid rgba(245,130,91,.3);
+          border-radius:9px;padding:11px 13px;margin-bottom:16px;line-height:1.5;">
+          👋 <strong>No admin account found.</strong> Please go to <strong>Register</strong> tab first.
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:16px;">Welcome back 👋</div>
+        <div class="iw"><label>Email Address</label>
+          <input class="inp" id="li-email" type="email" placeholder="you@example.com" autocomplete="email"/></div>
+        <div class="iw"><label>Password</label>
+          <input class="inp" id="li-pass" type="password" placeholder="Enter your password"/></div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px;">
+          <button class="btn bp bfull" id="btn-admin-signin" style="font-size:15px;padding:14px;">🔓 Sign In &amp; Go to Dashboard</button>
+          <button class="btn bs bfull" id="btn-signin-back">← Back to Role Selection</button>
+        </div>
+        <div style="text-align:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--bd);font-size:13px;color:var(--tx3);">
+          New here? <span id="goto-register" style="color:var(--ac);cursor:pointer;font-weight:700;margin-left:4px;">Create an account →</span>
+        </div>
+      </div>
+      <!-- REGISTER -->
+      <div id="f-reg" class="card" style="display:none;">
+        <div style="font-size:12px;color:var(--ac3);background:rgba(91,245,200,.07);
+          border:1px solid rgba(91,245,200,.2);border-radius:9px;padding:11px 13px;
+          margin-bottom:16px;line-height:1.5;">
+          📌 <strong>First time?</strong> Register once — saved for all future logins.
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:16px;">Create your account</div>
+        <div class="iw"><label>Full Name</label>
+          <input class="inp" id="rg-name" type="text" placeholder="e.g. Dr. Priya Verma" autocomplete="name"/></div>
+        <div class="iw"><label>Email Address</label>
+          <input class="inp" id="rg-email" type="email" placeholder="you@example.com" autocomplete="email"/></div>
+        <div class="iw"><label>Password (min 6 chars)</label>
+          <input class="inp" id="rg-pass" type="password" placeholder="Minimum 6 characters"/></div>
+        <div class="iw"><label>Confirm Password</label>
+          <input class="inp" id="rg-pass2" type="password" placeholder="Re-enter your password"/></div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px;">
+          <button class="btn bp bfull" id="btn-admin-register" style="font-size:15px;padding:14px;">✅ Create Account &amp; Continue</button>
+          <button class="btn bs bfull" id="btn-register-back">← Back to Role Selection</button>
+        </div>
+        <div style="text-align:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--bd);font-size:13px;color:var(--tx3);">
+          Already registered? <span id="goto-signin" style="color:var(--ac);cursor:pointer;font-weight:700;margin-left:4px;">Sign in →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 6: ADMIN DASHBOARD -->
+<div class="page z" id="pg-admin">
+  <div class="topbar">
+    <div class="tbrand">⚡ GITM QuizHub Admin</div>
+    <div class="tuser">
+      <div style="text-align:right;">
+        <div style="font-size:13px;font-weight:600;" id="a-tname">Administrator</div>
+        <div style="font-size:11px;color:var(--tx2);" id="a-temail">—</div>
+      </div>
+      <div class="av adm" id="a-av">A</div>
+      <button class="btn bd bsm" id="btn-admin-logout">🚪 Logout</button>
+    </div>
+  </div>
+  <div class="alayout">
+    <div class="sidebar">
+      <div class="slbl">Main</div>
+      <div class="ni on" data-sec="ov"><span class="ic">📊</span>Overview</div>
+      <div class="ni" data-sec="qz"><span class="ic">📝</span>Quizzes</div>
+      <div class="ni" data-sec="rs"><span class="ic">🏆</span>Results</div>
+      <div class="ni" data-sec="cr"><span class="ic">✨</span>Create Quiz</div>
+      <div class="slbl">System</div>
+      <div class="ni" data-sec="st"><span class="ic">👥</span>Students</div>
+      <div class="ni" data-sec="se"><span class="ic">⚙️</span>Settings</div>
+    </div>
+    <div class="amain">
+      <div class="asec on" id="s-ov">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:18px;">Dashboard Overview</div>
+        <div class="asgrid" id="a-stats"></div>
+        <div class="sec-h"><span></span>Recent Submissions</div>
+        <div id="a-recent"></div>
+      </div>
+      <div class="asec" id="s-qz">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;">All Quizzes</div>
+          <button class="btn bp bsm" id="btn-create-new">+ Create New</button>
+        </div>
+        <div id="a-qlist"></div>
+      </div>
+      <div class="asec" id="s-rs">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:18px;">Student Results</div>
+        <div class="card" style="overflow-x:auto;">
+          <table class="rtable">
+            <thead><tr><th>Student</th><th>Roll</th><th>Quiz</th><th>Subject</th><th>Score</th><th>Date</th><th></th></tr></thead>
+            <tbody id="a-results"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="asec" id="s-cr">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:18px;">Create Quiz</div>
+        <div class="mgrid">
+          <div class="mcard sel" id="m-manual"><div class="mi">✏️</div><h3>Manual Creation</h3><p>Write your own questions and mark correct answers</p></div>
+          <div class="mcard" id="m-ai"><div class="mi">🤖</div><h3>AI Generation</h3><p>Instant questions</p></div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:13px;">Quiz Details</div>
+          <div class="dgrid">
+            <div class="iw" style="margin:0;"><label>Title</label><input class="inp" id="nq-title" placeholder="e.g. Mid-term Quiz, Chapter 1 Quiz"/></div>
+            <div class="iw" style="margin:0;"><label>Subject</label>
+              <select class="inp" id="nq-subj">
+                <option value="">— Select —</option>
+                <option value="CN">Computer Networks</option>
+                <option value="IP">Internet Programming</option>
+                <option value="SE">Software Engineering</option>
+                <option value="AISC">Artificial Intelligence and Soft Computing</option>
+                <option value="MDM">Fundamentals of Telecommunication system</option>
+                <option value="IKS">Indian Knowlegde System</option>
+                <option value="OB">Open Bucket</option>
+                <option value="GK">General Knowledge</option>
+                <option value="APT">Aptitude</option>
+              </select>
+            </div>
+            <div class="iw" style="margin:0;"><label>Time (minutes)</label><input class="inp" id="nq-time" type="number" value="30" min="1" max="180"/></div>
+            <div class="iw" style="margin:0;"><label>Pass Score (%)</label><input class="inp" id="nq-pass" type="number" value="60" min="0" max="100"/></div>
+            <div class="iw" style="margin:0;grid-column:1/-1;"><label>Due date (optional)</label><input class="inp" id="nq-due" type="datetime-local"/></div>
+          </div>
+          <div id="manual-extras" style="margin-top:13px;">
+            <div class="iw" style="margin:0;"><label>Google Form link (optional)</label><input class="inp" id="nq-gform" type="url" placeholder="https://docs.google.com/forms/..."/></div>
+          </div>
+        </div>
+        <div id="ai-panel" style="display:none;margin-bottom:16px;">
+          <div style="background:var(--s2);border:1px solid rgba(91,110,245,.28);border-radius:13px;padding:18px;">
+            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:12px;">⚡ Quick Question Generator</div>
+            <div style="display:grid;grid-template-columns:1fr 110px;gap:12px;">
+              <div class="iw" style="margin:0;"><label>Subject</label>
+                <select class="inp" id="ai-subj-pick">
+                  <option value="">— Pick subject —</option>
+                  <option value="CN">CN</option><option value="IP">IP</option>
+                  <option value="SE">SE</option><option value="AISC">AISC</option><option value="MDM">MDM</option>
+                  <option value="IKS">IKS</option><option value="OB">OB</option><option value="GK">GK</option><option value="APT">APT</option>
+                </select>
+              </div>
+              <div class="iw" style="margin:0;"><label>No. of Qs</label>
+                <input class="inp" id="ai-count" type="number" value="5" min="1" max="10"/></div>
+            </div>
+            <div class="iw" style="margin:12px 0 0;"><label>Enter topic</label>
+              <input class="inp" id="ai-topic" placeholder="e.g. Protocols, TypeScript, SDLC..."/></div> -->
+            <button class="btn bp bsm" id="btn-generate">⚡ Generate Questions</button>
+            <div id="ai-stat" style="margin-top:9px;font-size:13px;"></div>
+          </div>
+        </div>
+        <div class="qbuilder">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;">
+              Questions <span id="q-cnt" style="color:var(--tx2);font-size:12px;font-weight:400;">(0)</span>
+            </div>
+            <button class="btn bs bsm" id="btn-add-q">+ Add Question</button>
+          </div>
+          <div id="qcontainer"></div>
+          <div id="qempty" style="text-align:center;padding:24px;color:var(--tx2);font-size:13px;
+            border:1.5px dashed var(--bd);border-radius:11px;">
+            <div style="font-size:28px;margin-bottom:8px;">📝</div>
+            Click "+ Add Question" to build manually or use AI above
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;">
+          <button class="btn bp" id="btn-publish" style="font-size:15px;padding:13px 26px;">🚀 Publish Quiz</button>
+          <button class="btn bs" id="btn-cancel-create">Cancel</button>
+        </div>
+      </div>
+      <div class="asec" id="s-st">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:18px;">Registered Students</div>
+        <div class="card" style="overflow-x:auto;">
+          <table class="rtable">
+            <thead><tr><th>Name</th><th>Roll Number</th><th>Quizzes</th><th>Avg Score</th></tr></thead>
+            <tbody id="a-students"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="asec" id="s-se">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:18px;">Settings</div>
+       <div class="card">
+  <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:13px;">Admin Account</div>
+  <div class="iw"><label>Logged in as</label><input class="inp" id="se-email" readonly/></div>
+  <div class="iw"><label>New Password</label><input class="inp" id="se-pass" type="password" placeholder="Min 6 characters"/></div>
+  
+  <button class="btn bp bsm" id="btn-save-pass" style="margin-top:10px;">Save Changes</button>
+</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="ov" id="m-score">
+  <div class="modal" style="text-align:center;">
+    <div style="font-size:46px;margin-bottom:9px;" id="sc-emoji">🎉</div>
+    <div class="scbig" id="sc-frac">0/0</div>
+    <div style="font-size:15px;color:var(--tx2);margin-top:5px;" id="sc-pct">0%</div>
+    <div style="font-size:14px;font-weight:700;margin-top:11px;" id="sc-msg"></div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:5px;">Quiz submitted ✅</div>
+    <button class="btn bp bfull" id="btn-close-score" style="margin-top:22px;">OK — Back to Dashboard</button>
+  </div>
+</div>
+<div class="ov" id="m-assign">
+  <div class="modal">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px;">📌 Assign Quiz</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:13px;" id="assign-name">—</div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px;">Select subjects:</div>
+    <div class="agrids" id="assign-chips"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bp" id="btn-confirm-assign" style="flex:1;">Assign ✓</button>
+      <button class="btn bs" id="btn-cancel-assign">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="ov" id="m-delete">
+  <div class="modal" style="text-align:center;">
+    <div style="font-size:36px;margin-bottom:10px;">⚠️</div>
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:6px;">Delete Quiz?</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:18px;">This cannot be undone.</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bd" id="btn-confirm-del" style="flex:1;">Yes, Delete</button>
+      <button class="btn bs" id="btn-cancel-del" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="ov" id="m-result">
+  <div class="modal">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:15px;">📋 Result Detail</div>
+    <div id="rdet"></div>
+    <button class="btn bs bfull" id="btn-close-result" style="margin-top:15px;">Close</button>
+  </div>
+</div>
+<div class="ov" id="m-gform-res">
+  <div class="modal">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:6px;">🧾 Google Form Result Entry</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:12px;" id="gfr-title">—</div>
+    <div class="iw"><label>Student Name</label><input class="inp" id="gfr-name" placeholder="e.g. John Doe"/></div>
+    <div class="iw"><label>Roll Number</label><input class="inp" id="gfr-roll" placeholder="e.g. 01"/></div>
+    <div class="dgrid" style="grid-template-columns:1fr 1fr;gap:13px;">
+      <div class="iw" style="margin-bottom:0;"><label>Score</label><input class="inp" id="gfr-score" type="number" min="0" placeholder="e.g. 80"/></div>
+      <div class="iw" style="margin-bottom:0;"><label>Total</label><input class="inp" id="gfr-total" type="number" min="1" placeholder="e.g. 100"/></div>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:-6px;margin-bottom:14px;">Tip: use Total = 100 and Score = % if your Google Form is percentage-based.</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn bp bsm" id="btn-save-gfr" style="flex:1;">Save Result</button>
+      <button class="btn bs" id="btn-cancel-gfr" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="ov" id="m-note">
+  <div class="modal">
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:16px;" id="note-modal-title">📓 New Note</div>
+    <div class="iw"><label>Title</label><input class="inp" id="note-title" placeholder="e.g. Topics to be Studied.."/></div>
+    <div class="iw"><label>Content</label><textarea class="inp" id="note-body" rows="5" placeholder="Write your study notes…"></textarea></div>
+    <div class="iw"><label>Color</label>
+      <div style="display:flex;gap:9px;margin-top:4px;" id="color-picker">
+        <div class="note-color on" data-c="#5b6ef5" style="background:#5b6ef5;"></div>
+        <div class="note-color" data-c="#f5825b" style="background:#f5825b;"></div>
+        <div class="note-color" data-c="#5bf5c8" style="background:#5bf5c8;"></div>
+        <div class="note-color" data-c="#f5d05b" style="background:#f5d05b;"></div>
+        <div class="note-color" data-c="#f55b5b" style="background:#f55b5b;"></div>
+        <div class="note-color" data-c="#5bf5a0" style="background:#5bf5a0;"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:5px;">
+      <button class="btn bp" id="btn-save-note" style="flex:1;">💾 Save Note</button>
+      <button class="btn bs" id="btn-cancel-note">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+/* QuizHub — no inline onclick; listeners wired in DOMContentLoaded */
+const DB = {
+  g(k) {
+    try {
+      return JSON.parse(localStorage.getItem('qh5_' + k));
+    } catch {
+      return null;
+    }
+  },
+
+  s(k, v) {
+    localStorage.setItem('qh5_' + k, JSON.stringify(v));
+  },
+
+  init() {
+    if (!this.g('quizzes')) {
+      this.s('quizzes', [
+
+        /* ==================== COMPUTER NETWORKS ==================== */
+        {
+          id: 'q1',
+          title: 'Computer Networks Fundamentals',
+          subject: 'CN',
+          time: 30,
+          pass: 60,
+          published: true,
+          assigned: ['CN'],
+          created: Date.now() - 86400000,
+          questions: [
+            {
+              q: 'What is a computer network?',
+              opts: [
+                'A collection of interconnected computers',
+                'A single computer',
+                'A programming language',
+                'An operating system'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which protocol is used to transfer web pages?',
+              opts: ['FTP', 'HTTP', 'SMTP', 'ARP'],
+              ans: 1
+            },
+            {
+              q: 'Which layer is responsible for routing?',
+              opts: [
+                'Physical Layer',
+                'Data Link Layer',
+                'Network Layer',
+                'Application Layer'
+              ],
+              ans: 2
+            },
+            {
+              q: 'What does IP stand for?',
+              opts: [
+                'Internet Protocol',
+                'Internal Process',
+                'Internet Program',
+                'Interface Protocol'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which protocol is connection-oriented?',
+              opts: ['UDP', 'IP', 'TCP', 'ARP'],
+              ans: 2
+            }
+          ]
+        },
+
+        /* ==================== INTERNET PROGRAMMING ==================== */
+        {
+          id: 'q2',
+          title: 'Internet Programming',
+          subject: 'IP',
+          time: 30,
+          pass: 60,
+          published: true,
+          assigned: ['IP'],
+          created: Date.now() - 172800000,
+          questions: [
+            {
+              q: 'What does HTML stand for?',
+              opts: [
+                'Hyper Text Markup Language',
+                'High Text Machine Language',
+                'Hyperlink Text Management Language',
+                'Home Tool Markup Language'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which language is mainly used to style web pages?',
+              opts: ['HTML', 'CSS', 'Java', 'SQL'],
+              ans: 1
+            },
+            {
+              q: 'Which keyword declares a variable in JavaScript?',
+              opts: ['var', 'define', 'variable', 'declare'],
+              ans: 0
+            },
+            {
+              q: 'Which HTML tag creates a hyperlink?',
+              opts: ['<link>', '<a>', '<href>', '<url>'],
+              ans: 1
+            },
+            {
+              q: 'What does CSS stand for?',
+              opts: [
+                'Computer Style Sheets',
+                'Cascading Style Sheets',
+                'Creative Style System',
+                'Colorful Style Sheets'
+              ],
+              ans: 1
+            }
+          ]
+        },
+
+        /* ==================== SOFTWARE ENGINEERING ==================== */
+        {
+          id: 'q3',
+          title: 'Software Engineering',
+          subject: 'SE',
+          time: 30,
+          pass: 60,
+          published: true,
+          assigned: ['SE'],
+          created: Date.now() - 259200000,
+          questions: [
+            {
+              q: 'What is software engineering?',
+              opts: [
+                'Systematic development and maintenance of software',
+                'Only writing code',
+                'Computer hardware design',
+                'Network configuration'
+              ],
+              ans: 0
+            },
+            {
+              q: 'What does SDLC stand for?',
+              opts: [
+                'Software Development Life Cycle',
+                'System Design Life Cycle',
+                'Software Data Logic Control',
+                'System Development Logic Cycle'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which model follows a sequential approach?',
+              opts: [
+                'Agile Model',
+                'Waterfall Model',
+                'Spiral Model',
+                'Prototype Model'
+              ],
+              ans: 1
+            },
+            {
+              q: 'What is software testing?',
+              opts: [
+                'Finding defects in software',
+                'Writing documentation only',
+                'Designing hardware',
+                'Installing an OS'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which methodology uses short development iterations?',
+              opts: ['Waterfall', 'Agile', 'Big Bang', 'V-Model'],
+              ans: 1
+            }
+          ]
+        },
+
+        /* ==================== AI AND SOFT COMPUTING ==================== */
+        {
+          id: 'q4',
+          title: 'Artificial Intelligence and Soft Computing',
+          subject: 'AISC',
+          time: 30,
+          pass: 60,
+          published: true,
+          assigned: ['AISC'],
+          created: Date.now() - 345600000,
+          questions: [
+            {
+              q: 'What is Artificial Intelligence?',
+              opts: [
+                'Simulation of human intelligence by machines',
+                'A type of hardware',
+                'A database system',
+                'A programming editor'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which is an example of an intelligent agent?',
+              opts: [
+                'Thermostat',
+                'Search engine',
+                'Calculator',
+                'Keyboard'
+              ],
+              ans: 1
+            },
+            {
+              q: 'What does ANN stand for?',
+              opts: [
+                'Artificial Neural Network',
+                'Advanced Network Node',
+                'Automated Neural Navigation',
+                'Artificial Network Number'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which technique is inspired by biological evolution?',
+              opts: [
+                'Genetic Algorithm',
+                'Binary Search',
+                'Sorting',
+                'Paging'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Fuzzy logic deals mainly with:',
+              opts: [
+                'Exact values only',
+                'Binary values only',
+                'Vagueness and uncertainty',
+                'Computer hardware'
+              ],
+              ans: 2
+            }
+          ]
+        },
+
+        /* ==================== FUNDAMENTALS OF TELECOMMUNICATION ==================== */
+        {
+          id: 'q5',
+          title: 'Fundamentals of Telecommunication System',
+          subject: 'MDM',
+          time: 30,
+          pass: 60,
+          published: true,
+          assigned: ['MDM'],
+          created: Date.now() - 432000000,
+          questions: [
+            {
+              q: 'What is telecommunication?',
+              opts: [
+                'Transmission of information over distance',
+                'Storage of files',
+                'Computer programming',
+                'Database management'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which device converts electrical signals into optical signals?',
+              opts: [
+                'Router',
+                'Optical transmitter',
+                'Keyboard',
+                'Switch'
+              ],
+              ans: 1
+            },
+            {
+              q: 'What is modulation?',
+              opts: [
+                'Changing a carrier signal according to information',
+                'Deleting a signal',
+                'Storing data',
+                'Encrypting a file'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which medium uses light for transmission?',
+              opts: [
+                'Twisted pair',
+                'Coaxial cable',
+                'Optical fiber',
+                'Radio cable'
+              ],
+              ans: 2
+            },
+            {
+              q: 'What is bandwidth?',
+              opts: [
+                'Data-carrying capacity of a communication channel',
+                'Physical size of a cable',
+                'Network password',
+                'Signal encryption'
+              ],
+              ans: 0
+            }
+          ]
+        },
+
+        /* ==================== INDIAN KNOWLEDGE SYSTEM ==================== */
+        {
+          id: 'q6',
+          title: 'Indian Knowledge System',
+          subject: 'IKS',
+          time: 25,
+          pass: 60,
+          published: true,
+          assigned: ['IKS'],
+          created: Date.now() - 518400000,
+          questions: [
+            {
+              q: 'What does IKS stand for?',
+              opts: [
+                'Indian Knowledge System',
+                'Indian Knowledge Science',
+                'International Knowledge System',
+                'Indian Knowledge Society'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which ancient Indian text is associated with mathematics and astronomy?',
+              opts: [
+                'Aryabhatiya',
+                'Arthashastra',
+                'Natya Shastra',
+                'Manusmriti'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Who is known for the Aryabhatiya?',
+              opts: [
+                'Aryabhata',
+                'Chanakya',
+                'Panini',
+                'Sushruta'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Ayurveda primarily deals with:',
+              opts: [
+                'Architecture',
+                'Health and medicine',
+                'Astronomy',
+                'Politics'
+              ],
+              ans: 1
+            },
+            {
+              q: 'The ancient Indian system of yoga focuses on:',
+              opts: [
+                'Physical and mental well-being',
+                'Computer programming',
+                'Trade',
+                'Engineering'
+              ],
+              ans: 0
+            }
+          ]
+        },
+
+        /* ==================== OPEN BUCKET ==================== */
+        {
+          id: 'q7',
+          title: 'Open Bucket General Quiz',
+          subject: 'OB',
+          time: 20,
+          pass: 60,
+          published: true,
+          assigned: ['OB'],
+          created: Date.now() - 604800000,
+          questions: [
+            {
+              q: 'Which device is used to store data permanently?',
+              opts: ['RAM', 'Hard Disk', 'Cache', 'Register'],
+              ans: 1
+            },
+            {
+              q: 'Which operating system is open source?',
+              opts: ['Linux', 'Windows', 'iOS', 'DOS'],
+              ans: 0
+            },
+            {
+              q: 'Which language is commonly used for data analysis?',
+              opts: ['Python', 'HTML', 'CSS', 'XML'],
+              ans: 0
+            },
+            {
+              q: 'What is cloud computing?',
+              opts: [
+                'Computing services delivered over the internet',
+                'Weather prediction',
+                'Local file storage only',
+                'A computer game'
+              ],
+              ans: 0
+            },
+            {
+              q: 'Which company developed Android?',
+              opts: [
+                'Microsoft',
+                'Google',
+                'IBM',
+                'Oracle'
+              ],
+              ans: 1
+            }
+          ]
+        },
+
+        /* ==================== GENERAL KNOWLEDGE ==================== */
+        {
+          id: 'q8',
+          title: 'General Knowledge',
+          subject: 'GK',
+          time: 20,
+          pass: 60,
+          published: true,
+          assigned: ['GK'],
+          created: Date.now() - 691200000,
+          questions: [
+            {
+              q: 'What is the capital of India?',
+              opts: ['Mumbai', 'New Delhi', 'Kolkata', 'Chennai'],
+              ans: 1
+            },
+            {
+              q: 'Who is known as the Father of the Indian Constitution?',
+              opts: [
+                'Mahatma Gandhi',
+                'Dr. B. R. Ambedkar',
+                'Jawaharlal Nehru',
+                'Sardar Patel'
+              ],
+              ans: 1
+            },
+            {
+              q: 'Which is the largest planet in our Solar System?',
+              opts: ['Earth', 'Saturn', 'Jupiter', 'Mars'],
+              ans: 2
+            },
+            {
+              q: 'Which is the national animal of India?',
+              opts: ['Lion', 'Elephant', 'Tiger', 'Peacock'],
+              ans: 2
+            },
+            {
+              q: 'How many states are there in India?',
+              opts: ['26', '28', '29', '30'],
+              ans: 1
+            }
+          ]
+        },
+
+        /* ==================== APTITUDE ==================== */
+        {
+          id: 'q9',
+          title: 'Aptitude Test',
+          subject: 'APT',
+          time: 30,
+          pass: 60,
+          published: true,
+          assigned: ['APT'],
+          created: Date.now() - 777600000,
+          questions: [
+            {
+              q: 'What is 20% of 150?',
+              opts: ['20', '25', '30', '35'],
+              ans: 2
+            },
+            {
+              q: 'If a train travels 60 km in 2 hours, what is its speed?',
+              opts: ['20 km/h', '30 km/h', '40 km/h', '60 km/h'],
+              ans: 1
+            },
+            {
+              q: 'What is the next number: 2, 4, 8, 16, ?',
+              opts: ['20', '24', '30', '32'],
+              ans: 3
+            },
+            {
+              q: 'If 5 pens cost ₹50, what is the cost of 1 pen?',
+              opts: ['₹5', '₹10', '₹15', '₹20'],
+              ans: 1
+            },
+            {
+              q: 'What is the average of 10, 20 and 30?',
+              opts: ['15', '20', '25', '30'],
+              ans: 1
+            }
+          ]
+        }
+
+      ]);
+    }
+
+    if (!this.g('results')) {
+      this.s('results', []);
+    }
+
+    if (!this.g('students')) {
+      this.s('students', []);
+    }
+
+    if (!this.g('admins')) {
+      this.s('admins', []);
+    }
+  }
+};
+
+DB.init();
+
+const SUBJS=[
+  {c:'CN',l:'Computer Networks'},
+  {c:'IP',  l:'Internet Programming'},
+  {c:'SE',  l:'Software Engineering'},
+  {c:'AISC',  l:'artificial Intelligence and Soft computing'},
+  {c:'MDM', l:'Fundamentals of Telecommunication System'},
+  {c:'IKS', l:'Indian Knowledge System'},
+  {c:'OB', l:'Open Bucket'},
+  {c:'GK', l:'General Knowledge'},
+  {c:'APT', l:'Aptitude'},
+];
+function subjLabel(c){return SUBJS.find(s=>s.c===c)?.l||c;}
+function qExtras(q){
+  const d=q.due?`<span class="qmeta">📅 ${new Date(q.due).toLocaleString()}</span>`:'';
+  const g=q.gform?`<a class="qmeta" href="${escAttr(q.gform)}" target="_blank" rel="noopener noreferrer" data-gform-open>🔗 Form</a>`:'';
+  return d+g;
+}
+const TIPS=[
+  'Space repetition is the most effective study technique — review after 1 day, 3 days, 1 week.',
+  'Teaching a concept to someone else is the fastest way to master it.',
+  'Take a 5-minute break every 25 minutes (Pomodoro) to maintain focus.',
+  'Always attempt every question — an educated guess beats a blank answer.',
+  'Read all options before choosing — the best answer may be the last one.',
+  'For MCQs, eliminate obviously wrong options first to narrow your choices.',
+  'Sleep consolidates memory — studying before sleep improves retention.',
+  'Handwritten notes are remembered better than typed ones.',
+  'If you finish early, always review your answers before submitting.',
+  'Focus on understanding the concept, not memorizing the answer.',
+  'Past quiz mistakes are your best study guide.',
+  'Stay hydrated — dehydration reduces cognitive performance significantly.',
+];
+
+
+function $(id){return document.getElementById(id);}
+function val(id){return ($(id)?.value||'').trim();}
+function rawVal(id){return $(id)?.value||'';}
+function isEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());}
+function escAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+
+let _toastT=null;
+function toast(msg,type=''){
+  const el=$('toast');
+  el.textContent=msg; el.className='show'+(type?' '+type:'');
+  clearTimeout(_toastT);
+  _toastT=setTimeout(()=>el.className='',3000);
+}
+
+// ──────────────────────────────────────────────────────────────
+//  NEW: GROK API CALLER
+// ──────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+//  AI API CALLER (Free Groq + Hardcoded Key)
+// ──────────────────────────────────────────────────────────────
+async function callGrokAPI(prompt) {
+
+    const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            prompt: prompt
+        })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || 'AI generation failed');
+    }
+
+    return data;
+}
+
+  if (!response.ok) {
+  const err = await response.text();
+  throw new Error(`Groq API error ${response.status}: ${err}`);
+}
+
+const data = await response.json();
+let text = data.choices[0].message.content.trim();
+
+if (text.startsWith('```json')) {
+  text = text.replace(/```json\n?/, '').replace(/```$/, '').trim();
+}
+
+if (text.startsWith('```')) {
+  text = text.replace(/```\n?/, '').replace(/```$/, '').trim();
+}
+
+return JSON.parse(text);
+
+
+// ──────────────────────────────────────────────────────────────
+
+function openOv(id){
+  $(id).classList.add('open');
+}
+
+function closeOv(id){
+  $(id).classList.remove('open');
+}
+
+
+
+function goTo(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='pg-admin-login') checkBanner();
+}
+
+let activeSub=null;
+
+function buildChips(){
+  $('chips').innerHTML=
+    `<div class="chip on" data-sub="">All</div>`+
+    SUBJS.map(s=>`<div class="chip" data-sub="${s.c}">${s.c}</div>`).join('');
+  $('chips').querySelectorAll('.chip').forEach(ch=>{
+    ch.classList.toggle('on', ch.dataset.sub===(activeSub||''));
+  });
+}
+
+let curStu=null;
+
+function stuLogin(){
+  const name=val('sname'), roll=val('sroll');
+  if(!name){toast('Please enter your name','err');return;}
+  if(!roll){toast('Please enter your roll number','err');return;}
+  curStu={name,roll};
+  const s=DB.g('students')||[];
+  if(!s.find(x=>x.roll===roll)){s.push({name,roll,joined:Date.now()});DB.s('students',s);}
+  $('s-tname').textContent=name;
+  $('s-troll').textContent=roll;
+  $('s-av').textContent=name[0].toUpperCase();
+  const h=new Date().getHours();
+  const greet=h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night';
+  $('s-welcome').textContent=`${greet}, ${name}! 👋`;
+  $('tip-text').textContent=TIPS[new Date().getDate()%TIPS.length];
+  activeSub=null;
+  buildChips();
+  renderStuQuizzes();
+  stuTab('home');
+  refreshStats();
+  goTo('pg-stu-dash');
+  toast(`Welcome, ${name}!`,'ok');
+}
+
+function refreshStats(){
+  if(!curStu) return;
+  const rs=(DB.g('results')||[]).filter(r=>r.roll===curStu.roll);
+  const passed=rs.filter(r=>r.passed).length;
+  const avg=rs.length?Math.round(rs.reduce((a,r)=>a+r.pct,0)/rs.length):null;
+  const best=rs.length?Math.max(...rs.map(r=>r.pct)):null;
+  $('ss-total').textContent=rs.length;
+  $('ss-passed').textContent=passed;
+  $('ss-avg').textContent=avg!==null?avg+'%':'—';
+  $('ss-best').textContent=best!==null?best+'%':'—';
+  $('s-sub').textContent=rs.length===0?'Ready to learn something new today!'
+    :avg>=80?'You\'re on fire! Keep it up 🔥'
+    :avg>=60?'Good progress — keep pushing! 💪'
+    :'Every attempt makes you stronger. Keep going! 🌱';
+}
+
+function stuTab(t){
+  document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.stab-panel').forEach(s=>s.classList.remove('on'));
+  document.querySelector(`.stab[data-tab="${t}"]`).classList.add('on');
+  $('sp-'+t).classList.add('on');
+  if(t==='results')  renderStuResults();
+  if(t==='progress') renderProgress();
+  if(t==='notes')    renderNotes();
+  if(t==='quizzes')  renderAllQuizzes();
+}
+
+function renderStuQuizzes(){
+  const search=($('s-search')?.value||'').toLowerCase();
+  const qzs=(DB.g('quizzes')||[]).filter(q=>q.published).filter(q=>{
+    const ms=!activeSub||(q.assigned||[]).includes(activeSub);
+    const mq=!search||q.title.toLowerCase().includes(search)||q.subject.toLowerCase().includes(search);
+    return ms&&mq;
+  });
+  const el=$('stu-qlist');
+  if(!qzs.length){
+    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="ei">📭</div><p>No quizzes found.<br>Ask your admin to assign quizzes.</p></div>`;
+    return;
+  }
+  el.innerHTML=qzs.map(q=>`
+    <div class="qcard" data-qid="${q.id}">
+      <div class="qcard-subj">${q.subject} · ${subjLabel(q.subject)}</div>
+      <div class="qcard-title">${q.title}</div>
+      <div class="qcard-meta">
+        <span class="qmeta">⏱ ${q.time} min</span>
+        <span class="qmeta">📝 ${q.questions.length} Qs</span>
+        <span class="qmeta">🎯 Pass: ${q.pass}%</span>
+        ${qExtras(q)}
+      </div>
+    </div>`).join('');
+}
+
+function renderAllQuizzes(){
+  const qzs=(DB.g('quizzes')||[]).filter(q=>q.published);
+  const el=$('stu-allquiz');
+  if(!qzs.length){el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="ei">📭</div><p>No quizzes yet.</p></div>`;return;}
+  const myRes=(DB.g('results')||[]).filter(r=>curStu&&r.roll===curStu.roll);
+  el.innerHTML=qzs.map(q=>{
+    const att=myRes.filter(r=>r.quizId===q.id);
+    const last=att.length?att[att.length-1]:null;
+    const badge=last
+      ?`<span class="tag ${last.passed?'tgreen':'tred'}">${last.passed?'✅ Passed':'❌ Failed'} · ${last.pct}%</span>`
+      :`<span class="tag tblue">🆕 Not attempted</span>`;
+    return `<div class="qcard" data-qid="${q.id}">
+      <div class="qcard-subj">${q.subject} · ${subjLabel(q.subject)}</div>
+      <div class="qcard-title">${q.title}</div>
+      <div class="qcard-meta" style="justify-content:space-between;flex-wrap:wrap;">
+        <span><span class="qmeta">⏱ ${q.time} min</span><span class="qmeta"> 📝 ${q.questions.length} Qs</span>${qExtras(q)}</span>
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStuResults(){
+  if(!curStu) return;
+  const rs=[...(DB.g('results')||[])].filter(r=>r.roll===curStu.roll).reverse();
+  const el=$('stu-res-list');
+  if(!rs.length){el.innerHTML=`<div class="empty"><div class="ei">📊</div><p>No results yet. Take a quiz!</p></div>`;return;}
+  el.innerHTML=rs.map(r=>`
+    <div class="res-card">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:2px;">${r.quiz}</div>
+        <div style="font-size:11px;color:var(--tx2);">${r.subject} · ${r.date} · ${r.total} questions</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div>
+          <div style="height:5px;width:70px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:3px;">
+            <div style="height:100%;width:${r.pct}%;background:${r.passed?'var(--grn)':'var(--red)'};border-radius:3px;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--tx2);text-align:center;">${r.score}/${r.total}</div>
+        </div>
+        <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:${r.passed?'var(--grn)':'var(--red)'};">${r.pct}%</div>
+        <span class="tag ${r.passed?'tgreen':'tred'}">${r.passed?'Pass':'Fail'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderProgress(){
+  if(!curStu) return;
+  const rs=(DB.g('results')||[]).filter(r=>r.roll===curStu.roll);
+  const COLORS=['#5b6ef5','#f5825b','#5bf5c8','#f5d05b','#f55b5b'];
+  const subjData=SUBJS.map((s,i)=>{
+    const srs=rs.filter(r=>r.subject===s.c);
+    const avg=srs.length?Math.round(srs.reduce((a,r)=>a+r.pct,0)/srs.length):null;
+    return{...s,avg,count:srs.length,color:COLORS[i]};
+  }).filter(s=>s.count>0);
+  $('subj-bars').innerHTML=!subjData.length
+    ?`<div style="color:var(--tx2);font-size:13px;padding:16px 0;">Take some quizzes to see subject performance!</div>`
+    :subjData.map(s=>`
+      <div class="pbar-wrap">
+        <div class="pbar-lbl">
+          <span style="font-weight:600;">${s.c} — ${s.l}</span>
+          <span style="color:var(--tx2);">${s.avg}% · ${s.count} quiz${s.count>1?'zes':''}</span>
+        </div>
+        <div class="pbar-track"><div class="pbar-fill" style="width:${s.avg}%;background:${s.color};"></div></div>
+      </div>`).join('');
+  const passed=rs.filter(r=>r.passed).length, failed=rs.length-passed;
+  const pct=rs.length?Math.round(passed/rs.length*100):0;
+  $('pf-ring').style.background=rs.length===0?'var(--bd)'
+    :`conic-gradient(var(--grn) 0deg ${pct*3.6}deg, var(--red) ${pct*3.6}deg 360deg)`;
+  $('pf-legend').innerHTML=rs.length===0?`<div style="font-size:12px;color:var(--tx2);">No data yet</div>`
+    :`<div style="font-size:13px;margin-bottom:5px;"><span style="color:var(--grn);font-weight:700;">${passed}</span> Passed</div>
+      <div style="font-size:13px;"><span style="color:var(--red);font-weight:700;">${failed}</span> Failed</div>
+      <div style="font-size:11px;color:var(--tx2);margin-top:5px;">${pct}% pass rate</div>`;
+  $('activity-chart').innerHTML=rs.length===0?`<div style="font-size:12px;color:var(--tx2);">No data</div>`
+    :SUBJS.filter(s=>rs.some(r=>r.subject===s.c)).map(s=>{
+      const n=rs.filter(r=>r.subject===s.c).length;
+      return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+        <div style="font-size:11px;width:38px;color:var(--tx2);">${s.c}</div>
+        <div style="flex:1;height:7px;background:var(--bd);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${Math.min(n*25,100)}%;background:var(--ac);border-radius:3px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--tx2);">${n}</div>
+      </div>`;
+    }).join('');
+  const last5=[...rs].slice(-5);
+  $('trend-chart').innerHTML=!last5.length?`<div style="font-size:12px;color:var(--tx2);">Take quizzes to see your trend.</div>`:`
+    <div style="display:flex;align-items:flex-end;gap:7px;height:72px;margin-bottom:5px;">
+      ${last5.map(r=>`
+        <div style="flex:1;border-radius:3px 3px 0 0;height:${Math.max(r.pct,8)}%;
+          background:${r.passed?'var(--grn)':'var(--red)'};position:relative;min-width:24px;">
+          <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+            font-size:9px;font-weight:700;color:var(--tx2);white-space:nowrap;">${r.pct}%</div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:7px;">
+      ${last5.map(r=>`<div style="flex:1;text-align:center;font-size:10px;color:var(--tx2);">${r.subject}</div>`).join('')}
+    </div>`;
+}
+
+let editNoteId=null, noteColor='#5b6ef5';
+
+function openNoteModal(id){
+  editNoteId=id||null;
+  const notes=DB.g('notes_'+(curStu?.roll||''))||[];
+  const note=id?notes.find(n=>n.id===id):null;
+  $('note-modal-title').textContent=id?'✏️ Edit Note':'📓 New Note';
+  $('note-title').value=note?note.title:'';
+  $('note-body').value=note?note.body:'';
+  noteColor=note?note.color:'#5b6ef5';
+  document.querySelectorAll('.note-color').forEach(el=>el.classList.toggle('on',el.dataset.c===noteColor));
+  openOv('m-note');
+  setTimeout(()=>$('note-title').focus(),60);
+}
+
+function saveNote(){
+  const title=val('note-title'), body=val('note-body');
+  if(!title){toast('Enter a title','err');return;}
+  if(!body){toast('Write some content','err');return;}
+  const key='notes_'+(curStu?.roll||'');
+  const notes=DB.g(key)||[];
+  if(editNoteId){
+    const i=notes.findIndex(n=>n.id===editNoteId);
+    if(i!==-1) notes[i]={...notes[i],title,body,color:noteColor,updated:Date.now()};
+  } else {
+    notes.unshift({id:'n'+Date.now(),title,body,color:noteColor,created:Date.now()});
+  }
+  DB.s(key,notes);
+  closeOv('m-note');
+  renderNotes();
+  toast(editNoteId?'Note updated!':'Note saved!','ok');
+}
+
+function deleteNote(id){
+  const key='notes_'+(curStu?.roll||'');
+  DB.s(key,(DB.g(key)||[]).filter(n=>n.id!==id));
+  renderNotes();
+  toast('Note deleted');
+}
+
+function renderNotes(){
+  if(!curStu) return;
+  const notes=DB.g('notes_'+curStu.roll)||[];
+  $('notes-empty').style.display=notes.length?'none':'block';
+  $('notes-grid').innerHTML=notes.map(n=>`
+    <div class="nc" data-note-edit="${n.id}">
+      <button class="nc-del" data-note-del="${n.id}">✕</button>
+      <div class="nc-bar" style="background:${n.color};"></div>
+      <div class="nc-title">${n.title}</div>
+      <div class="nc-body">${n.body}</div>
+      <div class="nc-date">${new Date(n.created).toLocaleDateString()}</div>
+    </div>`).join('');
+}
+
+let QS={qz:null,cur:0,ans:[],t:0,ti:null};
+
+function startQuiz(id){
+  const qz=(DB.g('quizzes')||[]).find(q=>q.id===id);
+  if(!qz){toast('Quiz not found','err');return;}
+  if(qz.due&&Date.now()>+new Date(qz.due)){toast('This quiz is past its due date','err');return;}
+  if(!qz.questions.length){
+    if(qz.gform){window.open(qz.gform,'_blank','noopener,noreferrer');toast('Complete this quiz in Google Forms','ok');return;}
+    toast('This quiz has no questions yet','err');return;
+  }
+  QS={qz,cur:0,ans:new Array(qz.questions.length).fill(null),t:qz.time*60,ti:null};
+  $('qa-title').textContent=qz.title;
+  renderQ(); startTimer(); goTo('pg-quiz');
+}
+
+function renderQ(){
+  const {qz,cur,ans}=QS, tot=qz.questions.length, q=qz.questions[cur];
+  const answered=ans.filter(a=>a!==null).length;
+  $('q-pfill').style.width=((cur+1)/tot*100)+'%';
+  $('q-ptext').textContent=`Q ${cur+1}/${tot}`;
+  $('q-pans').textContent=`${answered} answered`;
+  $('q-dots').innerHTML=qz.questions.map((_,i)=>
+    `<div class="dot ${i===cur?'cur':''} ${ans[i]!==null?'ans':''}" data-qi="${i}">${i+1}</div>`).join('');
+  $('q-num').textContent=`Question ${cur+1}`;
+  $('q-text').textContent=q.q;
+  $('q-opts').innerHTML=q.opts.map((o,i)=>`
+    <div class="opt ${ans[cur]===i?'sel':''}" data-oi="${i}">
+      <div class="olet">${['A','B','C','D'][i]}</div><div>${o}</div>
+    </div>`).join('');
+  $('btn-prev').style.visibility=cur===0?'hidden':'visible';
+  $('btn-next').style.display=cur===tot-1?'none':'inline-flex';
+  $('btn-sub').style.display=cur===tot-1?'inline-flex':'none';
+}
+
+function startTimer(){
+  clearInterval(QS.ti); tickT();
+  QS.ti=setInterval(()=>{QS.t--;tickT();if(QS.t<=0){clearInterval(QS.ti);submitQuiz();}},1000);
+}
+function tickT(){
+  const m=String(Math.floor(QS.t/60)).padStart(2,'0'), s=String(QS.t%60).padStart(2,'0');
+  $('qa-timer').textContent=`⏱ ${m}:${s}`;
+  $('qa-timer').className='tbox'+(QS.t<60?' red':'');
+}
+
+function submitQuiz(){
+  clearInterval(QS.ti);
+  const {qz,ans}=QS;
+  const score=ans.reduce((a,x,i)=>x===qz.questions[i].ans?a+1:a,0);
+  const tot=qz.questions.length, pct=Math.round(score/tot*100), passed=pct>=qz.pass;
+  const rs=DB.g('results')||[];
+  rs.push({id:'r'+Date.now(),student:curStu.name,roll:curStu.roll,
+    quiz:qz.title,quizId:qz.id,subject:qz.subject,score,total:tot,pct,passed,
+    date:new Date().toLocaleDateString()});
+  DB.s('results',rs);
+  $('sc-emoji').textContent=passed?'🎉':'📚';
+  $('sc-frac').textContent=`${score}/${tot}`;
+  $('sc-pct').textContent=`${pct}% correct`;
+  $('sc-msg').textContent=passed?'Congratulations! You passed! 🌟':'Keep practising — you can do it!';
+  $('sc-msg').style.color=passed?'var(--grn)':'var(--red)';
+  openOv('m-score');
+}
+
+let curAdmin=null;
+
+function checkBanner(){
+  const ads=DB.g('admins')||[];
+  const fReg=$('f-reg');
+  const onSignIn=fReg&&fReg.style.display==='none';
+  $('no-adm-banner').style.display=(ads.length===0&&onSignIn)?'block':'none';
+}
+
+function aTab(t){
+  $('tab-in').classList.toggle('on',t==='in');
+  $('tab-reg').classList.toggle('on',t==='reg');
+  $('f-in').style.display=t==='in'?'block':'none';
+  $('f-reg').style.display=t==='reg'?'block':'none';
+  checkBanner();
+  setTimeout(()=>{
+    const form=$(t==='in'?'f-in':'f-reg');
+    form?.querySelector('input')?.focus();
+  },60);
+}
+
+function adminRegister(){
+  const name=val('rg-name'), email=rawVal('rg-email').trim().toLowerCase();
+  const pass=rawVal('rg-pass'), pass2=rawVal('rg-pass2');
+  if(!name){toast('Enter your name','err');return;}
+  if(!isEmail(email)){toast('Enter a valid email address','err');return;}
+  if(pass.length<6){toast('Password must be at least 6 characters','err');return;}
+  if(pass!==pass2){toast('Passwords do not match','err');return;}
+  const ads=DB.g('admins')||[];
+  if(ads.find(a=>a.email===email)){toast('Email already registered — please sign in','err');aTab('in');return;}
+  ads.push({name,email,pass}); DB.s('admins',ads);
+  ['rg-name','rg-email','rg-pass','rg-pass2'].forEach(id=>$(id).value='');
+  $('li-email').value=email;
+  aTab('in');
+  setTimeout(()=>$('li-pass').focus(),80);
+  toast(`Account created for ${name}! Sign in below.`,'ok');
+}
+
+function adminLogin(){
+  const email = rawVal('li-email').trim().toLowerCase();
+  const pass = rawVal('li-pass');
+
+  if(!isEmail(email)){ toast('Enter a valid email address','err'); return; }
+  if(!pass){ toast('Enter your password','err'); return; }
+
+  const ads = DB.g('admins') || [];
+  if(!ads.length){ 
+    toast('No admins registered yet — please register','err'); 
+    aTab('reg'); 
+    return; 
+  }
+
+  const match = ads.find(a => a.email === email);
+  if(!match){ 
+    toast('No account with this email — please register','err'); 
+    aTab('reg'); 
+    return; 
+  }
+  if(match.pass !== pass){ 
+    toast('Incorrect password','err'); 
+    $('li-pass').value = ''; 
+    $('li-pass').focus(); 
+    return; 
+  }
+
+  curAdmin = match;
+
+  // Removed Grok key loading since we hardcoded it
+  $('a-tname').textContent = curAdmin.name;
+  $('a-temail').textContent = curAdmin.email;
+  $('a-av').textContent = curAdmin.name[0].toUpperCase();
+  $('se-email').value = curAdmin.email;
+  $('li-pass').value = '';
+
+  refreshAdmin();
+  goTo('pg-admin');
+  toast(`Welcome, ${curAdmin.name}! 👋`, 'ok');
+}
+
+function adminLogout(){
+  curAdmin=null;
+  $('li-email').value=''; $('li-pass').value='';
+  aTab('in'); goTo('pg-role'); toast('Logged out');
+}
+
+function swSec(sec){
+  document.querySelectorAll('.asec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  $('s-'+sec).classList.add('on');
+  document.querySelector(`.ni[data-sec="${sec}"]`).classList.add('on');
+  if(sec==='ov') renderOv();
+  if(sec==='qz') renderQz();
+  if(sec==='rs') renderRs();
+  if(sec==='st') renderSt();
+  if(sec==='cr') resetCreate();
+}
+
+function refreshAdmin(){renderOv();renderQz();renderRs();renderSt();}
+
+function renderOv(){
+  const qzs=DB.g('quizzes')||[], rs=DB.g('results')||[], sts=DB.g('students')||[];
+  const avg=rs.length?Math.round(rs.reduce((a,r)=>a+r.pct,0)/rs.length):0;
+  $('a-stats').innerHTML=`
+    <div class="asc" style="--clr:var(--ac)"><div class="asv">${qzs.length}</div><div class="asl">Quizzes</div></div>
+    <div class="asc" style="--clr:var(--ac2)"><div class="asv">${rs.length}</div><div class="asl">Submissions</div></div>
+    <div class="asc" style="--clr:var(--grn)"><div class="asv">${sts.length}</div><div class="asl">Students</div></div>
+    <div class="asc" style="--clr:var(--red)"><div class="asv">${avg}%</div><div class="asl">Avg Score</div></div>`;
+  const rec=[...rs].reverse().slice(0,6);
+  $('a-recent').innerHTML=rec.length?rec.map(r=>`
+    <div class="qrow">
+      <div class="qri"><h4>${r.student} <span style="color:var(--tx2);font-weight:400;font-size:11px;">#${r.roll}</span></h4>
+        <p>${r.quiz} · ${r.subject} · ${r.date}</p></div>
+      <span class="tag ${r.passed?'tgreen':'tred'}">${r.pct}%</span>
+    </div>`).join(''):`<div class="empty"><div class="ei">📊</div><p>No activity yet</p></div>`;
+}
+
+function renderQz(){
+  const qzs=DB.g('quizzes')||[];
+  $('a-qlist').innerHTML=qzs.length?qzs.map(q=>`
+    <div class="qrow">
+      <div class="qri"><h4>${q.title}</h4>
+        <p>${q.subject} · ${q.questions.length} Qs · ${q.time} min${q.due?' · Due '+new Date(q.due).toLocaleString():''} · Assigned: ${(q.assigned||[]).join(', ')||'None'}</p></div>
+      <div class="qra">
+        <button class="btn bs bsm" data-assign="${q.id}">📌 Assign</button>
+        ${q.gform && (!q.questions || !q.questions.length) ? `<button class="btn bg bsm" data-gform-res="${q.id}" title="Enter score for Google Form submission">🧾 Add Result</button>` : ''}
+        <button class="btn bd bsm" data-del="${q.id}">🗑️</button>
+      </div>
+    </div>`).join(''):`<div class="empty"><div class="ei">📝</div><p>No quizzes yet.</p></div>`;
+}
+
+function renderRs(){
+  const rs=DB.g('results')||[];
+  $('a-results').innerHTML=rs.length?[...rs].reverse().map(r=>`
+    <tr>
+      <td>${r.student}</td><td style="font-family:'Space Mono',monospace;font-size:11px;">${r.roll}</td>
+      <td>${r.quiz}</td><td><span class="tag tblue">${r.subject}</span></td>
+      <td><div style="display:flex;align-items:center;gap:7px;">
+        <span style="font-weight:700;color:${r.passed?'var(--grn)':'var(--red)'};">${r.pct}%</span>
+        <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;min-width:45px;">
+          <div style="height:100%;width:${r.pct}%;background:${r.passed?'var(--grn)':'var(--red)'};border-radius:2px;"></div>
+        </div>
+      </div></td>
+      <td style="color:var(--tx2);font-size:12px;">${r.date}</td>
+      <td><button class="btn bs bsm" data-view-res="${r.id}">View</button></td>
+    </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--tx2);">No results yet</td></tr>`;
+}
+
+function renderSt(){
+  const sts=DB.g('students')||[], rs=DB.g('results')||[];
+  $('a-students').innerHTML=sts.length?sts.map(s=>{
+    const sr=rs.filter(r=>r.roll===s.roll);
+    const avg=sr.length?Math.round(sr.reduce((a,r)=>a+r.pct,0)/sr.length):'-';
+    return `<tr><td>${s.name}</td><td style="font-family:'Space Mono',monospace;font-size:11px;">${s.roll}</td>
+      <td>${sr.length}</td><td>${avg}${avg!=='-'?'%':''}</td></tr>`;
+  }).join(''):`<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--tx2);">No students yet</td></tr>`;
+}
+
+let assignId=null, assignSel=[];
+
+function openAssign(id){
+  assignId=id;
+  const qz=(DB.g('quizzes')||[]).find(q=>q.id===id);
+  $('assign-name').textContent='Assigning: '+qz.title;
+  assignSel=[...(qz.assigned||[])];
+  $('assign-chips').innerHTML=SUBJS.map(s=>`
+    <div class="achip ${assignSel.includes(s.c)?'sel':''}" data-asubj="${s.c}">${s.c} — ${s.l}</div>`).join('');
+  openOv('m-assign');
+}
+
+let delId=null;
+function openDel(id){delId=id; openOv('m-delete');}
+
+let gfrQuizId=null;
+function openGformResult(id){
+  gfrQuizId=id;
+  const qz=(DB.g('quizzes')||[]).find(q=>q.id===id);
+  if(!qz){toast('Quiz not found','err');return;}
+  $('gfr-title').textContent=`Quiz: ${qz.title} (${subjLabel(qz.subject)})`;
+  ['gfr-name','gfr-roll','gfr-score','gfr-total'].forEach(k=>$(k).value='');
+  openOv('m-gform-res');
+  setTimeout(()=>$('gfr-name').focus(),60);
+}
+
+function saveGformResult(){
+  const qz=(DB.g('quizzes')||[]).find(q=>q.id===gfrQuizId);
+  if(!qz){toast('Quiz not found','err');return;}
+
+  const name=val('gfr-name');
+  const roll=rawVal('gfr-roll').trim();
+  const score=parseFloat(rawVal('gfr-score'));
+  const total=parseFloat(rawVal('gfr-total'));
+
+  if(!name){toast('Enter student name','err');return;}
+  if(!roll){toast('Enter roll number','err');return;}
+  if(!Number.isFinite(score)){toast('Enter score','err');return;}
+  if(!Number.isFinite(total) || total<=0){toast('Enter total (> 0)','err');return;}
+  if(score<0 || score>total){toast('Score must be between 0 and Total','err');return;}
+
+  const pct=Math.round(score/total*100);
+  const passed=pct>=qz.pass;
+
+  const rs=DB.g('results')||[];
+  rs.push({id:'r'+Date.now(),student:name,roll,quiz:qz.title,quizId:qz.id,subject:qz.subject,score,total,pct,passed,date:new Date().toLocaleDateString()});
+  DB.s('results',rs);
+
+  // Ensure student exists for the Students tab
+  const sts=DB.g('students')||[];
+  if(!sts.find(s=>s.roll===roll)){sts.push({name,roll,joined:Date.now()});DB.s('students',sts);}
+
+  closeOv('m-gform-res');
+  refreshAdmin();
+  toast('Google Form result saved','ok');
+}
+
+let cMode='manual', qctr=0;
+
+function resetCreate(){
+  cMode='manual';
+  $('m-manual').classList.add('sel'); $('m-ai').classList.remove('sel');
+  $('ai-panel').style.display='none';
+  $('manual-extras').style.display='block';
+  ['nq-title','nq-gform','nq-due','ai-topic'].forEach(id=>$(id).value='');
+  $('nq-subj').value=''; $('nq-time').value='30'; $('nq-pass').value='60';
+  $('qcontainer').innerHTML=''; updCnt();
+}
+
+function updCnt(){
+  const n=$('qcontainer').querySelectorAll('.qi').length;
+  $('q-cnt').textContent=`(${n})`;
+  $('qempty').style.display=n?'none':'block';
+}
+
+function addQ(data){
+  const id=++qctr, q=data||{q:'',opts:['','','',''],ans:0};
+  const div=document.createElement('div');
+  div.className='qi'; div.dataset.uid=id;
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  div.innerHTML=`
+    <div class="qi-head"><span>Question ${id}</span>
+      <button class="rmq" data-rmq="${id}">✕</button></div>
+    <div class="iw" style="margin-bottom:9px;"><label>Question Text</label>
+      <input class="inp" id="qt_${id}" placeholder="Type question…" value="${esc(q.q)}"/></div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:7px;">
+      Options — click radio to mark correct answer
+    </div>
+    <div class="ogrid">
+      ${['A','B','C','D'].map((L,i)=>`
+        <div class="orow">
+          <input type="radio" class="orad" name="cor_${id}" id="cor_${id}_${i}" value="${i}" ${q.ans===i?'checked':''}/>
+          <label class="olbl" for="cor_${id}_${i}">${L}</label>
+          <input class="inp" id="oo_${id}_${i}" placeholder="Option ${L}" value="${esc(q.opts[i]||'')}"/>
+        </div>`).join('')}
+    </div>`;
+  $('qcontainer').appendChild(div);
+  updCnt();
+  div.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function collectQs(){
+  const items=[...$('qcontainer').querySelectorAll('.qi')];
+  const questions=[];
+  for(const item of items){
+    const id=item.dataset.uid;
+    const qtext=($('qt_'+id)?.value||'').trim();
+    const opts=[0,1,2,3].map(i=>($(`oo_${id}_${i}`)?.value||'').trim());
+    const checked=item.querySelector(`input[name="cor_${id}"]:checked`);
+    const ans=checked?parseInt(checked.value):0;
+    if(!qtext){toast('Fill in all question texts','err');return null;}
+    if(opts.some(o=>!o)){toast('Fill in all 4 options','err');return null;}
+    questions.push({q:qtext,opts,ans});
+  }
+  return questions;
+}
+
+function doAI(){
+  const subj = $('ai-subj-pick')?.value || $('nq-subj')?.value;
+  const count = Math.min(parseInt($('ai-count')?.value)||5, 10);
+  const topic = val('ai-topic').trim();
+
+  const statEl = $('ai-stat');
+  if (!subj) {
+    toast('Select a subject first', 'err');
+    return;
+  }
+
+  statEl.innerHTML = '<span class="spin"></span> <span style="color:var(--ac);">Generating questions </span>';
+  $('btn-generate').disabled = true;
+
+  let userPrompt = `Generate exactly ${count} multiple-choice questions for subject "${subj}"`;
+  if (topic) userPrompt += ` on the topic: ${topic}`;
+  userPrompt += `. Each question must have exactly 4 options and one correct answer index (0-3).
+
+Return ONLY a JSON array in this exact format:
+[
+  {"q": "question text here", "opts": ["option A", "option B", "option C", "option D"], "ans": 2},
+  ...
+]`;
+
+  callGrokAPI(userPrompt)
+    .then(questions => {
+      questions.forEach(q => addQ(q));
+      statEl.innerHTML = `<span style="color:var(--grn);">✅ ${questions.length} questions added!</span>`;
+      toast(`${questions.length} questions generated`, 'ok');
+      if (!$('nq-subj').value) $('nq-subj').value = subj;
+    })
+    .catch(err => {
+      console.error(err);
+      statEl.innerHTML = `<span style="color:var(--red);">❌ ${err.message}</span>`;
+      toast('Grok API failed — check your key or try again', 'err');
+    })
+    .finally(() => {
+      $('btn-generate').disabled = false;
+    });
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  $('btn-go-stu').addEventListener('click',()=>goTo('pg-stu-info'));
+  $('btn-go-adm').addEventListener('click',()=>goTo('pg-admin-login'));
+  $('stu-info-back').addEventListener('click',()=>goTo('pg-role'));
+  $('btn-stu-back').addEventListener('click',()=>goTo('pg-role'));
+  $('btn-stu-continue').addEventListener('click',stuLogin);
+  $('sname').addEventListener('keydown',e=>{if(e.key==='Enter')$('sroll').focus();});
+  $('sroll').addEventListener('keydown',e=>{if(e.key==='Enter')stuLogin();});
+  $('btn-stu-home').addEventListener('click',()=>goTo('pg-role'));
+  $('s-search').addEventListener('input',renderStuQuizzes);
+  document.querySelectorAll('.stab').forEach(tab=>{
+    tab.addEventListener('click',()=>stuTab(tab.dataset.tab));
+  });
+  $('chips').addEventListener('click',e=>{
+    const chip=e.target.closest('.chip');
+    if(!chip) return;
+    activeSub=chip.dataset.sub||null;
+    buildChips();
+    renderStuQuizzes();
+  });
+
+  const stuCardClick=(e)=>{
+    if(e.target.closest('[data-gform-open]')){e.stopPropagation();return;}
+    const card=e.target.closest('.qcard');
+    if(card) startQuiz(card.dataset.qid);
+  };
+  $('stu-qlist').addEventListener('click',stuCardClick);
+  $('stu-allquiz').addEventListener('click',stuCardClick);
+  $('btn-new-note').addEventListener('click',()=>openNoteModal(null));
+  $('notes-grid').addEventListener('click',e=>{
+    const del=e.target.closest('[data-note-del]');
+    const edit=e.target.closest('[data-note-edit]');
+    if(del){e.stopPropagation(); deleteNote(del.dataset.noteDel);}
+    else if(edit) openNoteModal(edit.dataset.noteEdit);
+  });
+  $('color-picker').addEventListener('click',e=>{
+    const btn=e.target.closest('.note-color');
+    if(!btn) return;
+    noteColor=btn.dataset.c;
+    document.querySelectorAll('.note-color').forEach(el=>el.classList.toggle('on',el===btn));
+  });
+  $('btn-save-note').addEventListener('click',saveNote);
+  $('btn-cancel-note').addEventListener('click',()=>closeOv('m-note'));
+  $('btn-prev').addEventListener('click',()=>{if(QS.cur>0){QS.cur--;renderQ();}});
+  $('btn-next').addEventListener('click',()=>{if(QS.cur<QS.qz.questions.length-1){QS.cur++;renderQ();}});
+  $('btn-sub').addEventListener('click',submitQuiz);
+  $('q-opts').addEventListener('click',e=>{
+    const opt=e.target.closest('.opt');
+    if(opt){QS.ans[QS.cur]=parseInt(opt.dataset.oi);renderQ();}
+  });
+  $('q-dots').addEventListener('click',e=>{
+    const dot=e.target.closest('.dot');
+    if(dot){QS.cur=parseInt(dot.dataset.qi);renderQ();}
+  });
+  $('btn-close-score').addEventListener('click',()=>{
+    closeOv('m-score'); refreshStats(); renderStuQuizzes(); goTo('pg-stu-dash');
+  });
+  $('admin-login-back').addEventListener('click',()=>goTo('pg-role'));
+  $('btn-signin-back').addEventListener('click',()=>goTo('pg-role'));
+  $('btn-register-back').addEventListener('click',()=>goTo('pg-role'));
+  $('tab-in').addEventListener('click',()=>aTab('in'));
+  $('tab-reg').addEventListener('click',()=>aTab('reg'));
+  $('goto-register').addEventListener('click',()=>aTab('reg'));
+  $('goto-signin').addEventListener('click',()=>aTab('in'));
+  $('btn-admin-signin').addEventListener('click',adminLogin);
+  $('btn-admin-register').addEventListener('click',adminRegister);
+  $('li-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('li-pass').focus();});
+  $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin();});
+  $('rg-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('rg-email').focus();});
+  $('rg-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('rg-pass').focus();});
+  $('rg-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('rg-pass2').focus();});
+  $('rg-pass2').addEventListener('keydown',e=>{if(e.key==='Enter')adminRegister();});
+  $('btn-admin-logout').addEventListener('click',adminLogout);
+  document.querySelector('.sidebar').addEventListener('click',e=>{
+    const ni=e.target.closest('.ni');
+    if(ni) swSec(ni.dataset.sec);
+  });
+
+  $('btn-create-new').addEventListener('click',()=>swSec('cr'));
+  $('a-qlist').addEventListener('click',e=>{
+    const gBtn=e.target.closest('[data-gform-res]');
+    const aBtn=e.target.closest('[data-assign]');
+    const dBtn=e.target.closest('[data-del]');
+    if(gBtn) openGformResult(gBtn.dataset.gformRes);
+    else if(aBtn) openAssign(aBtn.dataset.assign);
+    else if(dBtn) openDel(dBtn.dataset.del);
+  });
+  $('a-results').addEventListener('click',e=>{
+    const vBtn=e.target.closest('[data-view-res]');
+    if(vBtn){
+      const r=(DB.g('results')||[]).find(x=>x.id===vBtn.dataset.viewRes);
+      if(r){
+        $('rdet').innerHTML=`
+          <div class="detrow"><span>Student</span><strong>${r.student}</strong></div>
+          <div class="detrow"><span>Roll</span><strong>${r.roll}</strong></div>
+          <div class="detrow"><span>Quiz</span><strong>${r.quiz}</strong></div>
+          <div class="detrow"><span>Subject</span><strong>${r.subject}</strong></div>
+          <div class="detrow"><span>Score</span><strong>${r.score}/${r.total} (${r.pct}%)</strong></div>
+          <div class="detrow"><span>Status</span><span class="tag ${r.passed?'tgreen':'tred'}">${r.passed?'Passed':'Failed'}</span></div>
+          <div class="detrow"><span>Date</span><strong>${r.date}</strong></div>`;
+        openOv('m-result');
+      }
+    }
+  });
+  $('btn-close-result').addEventListener('click',()=>closeOv('m-result'));
+  $('assign-chips').addEventListener('click',e=>{
+    const chip=e.target.closest('.achip');
+    if(!chip) return;
+    const s=chip.dataset.asubj;
+    if(assignSel.includes(s)){assignSel=assignSel.filter(x=>x!==s);chip.classList.remove('sel');}
+    else{assignSel.push(s);chip.classList.add('sel');}
+  });
+  $('btn-confirm-assign').addEventListener('click',()=>{
+    const qzs=DB.g('quizzes')||[];
+    const i=qzs.findIndex(q=>q.id===assignId);
+    if(i!==-1){qzs[i].assigned=[...assignSel];DB.s('quizzes',qzs);}
+    closeOv('m-assign'); renderQz(); toast('Quiz assigned!','ok');
+  });
+  $('btn-cancel-assign').addEventListener('click',()=>closeOv('m-assign'));
+  $('btn-confirm-del').addEventListener('click',()=>{
+    DB.s('quizzes',(DB.g('quizzes')||[]).filter(q=>q.id!==delId));
+    closeOv('m-delete'); renderQz(); renderOv(); toast('Quiz deleted','err');
+  });
+  $('btn-cancel-del').addEventListener('click',()=>closeOv('m-delete'));
+  $('btn-save-gfr').addEventListener('click',saveGformResult);
+  $('btn-cancel-gfr').addEventListener('click',()=>closeOv('m-gform-res'));
+
+  $('m-manual').closest('.mgrid').addEventListener('click',e=>{
+    const m=e.target.closest('#m-manual, #m-ai');
+    if(!m) return;
+    cMode=m.id==='m-manual'?'manual':'ai';
+    $('m-manual').classList.toggle('sel',cMode==='manual');
+    $('m-ai').classList.toggle('sel',cMode==='ai');
+    $('ai-panel').style.display=cMode==='ai'?'block':'none';
+    $('manual-extras').style.display=cMode==='manual'?'block':'none';
+  });
+  $('btn-add-q').addEventListener('click',()=>addQ(null));
+  $('btn-generate').addEventListener('click',doAI);
+  $('btn-publish').addEventListener('click',()=>{
+    const title=val('nq-title'), subj=$('nq-subj').value;
+    const time=parseInt($('nq-time').value)||30, pass=parseInt($('nq-pass').value)||60;
+    const dueRaw=rawVal('nq-due').trim();
+    const due=dueRaw?new Date(dueRaw).toISOString():null;
+    let gform='';
+    if(cMode==='manual'){
+      gform=val('nq-gform');
+      if(gform){
+        try{ gform=new URL(/^https?:/i.test(gform)?gform:'https://'+gform).href; }
+        catch{ toast('Enter a valid Google Form URL','err'); return; }
+      }
+    }
+    if(!title){toast('Enter a quiz title','err');return;}
+    if(!subj){toast('Select a subject','err');return;}
+    const questions=collectQs();
+    if(!questions) return;
+    if(!questions.length&&!(cMode==='manual'&&gform)){toast('Add at least one question','err');return;}
+    const qzs=DB.g('quizzes')||[];
+    const row={id:'q'+Date.now(),title,subject:subj,time,pass,questions,assigned:[subj],published:true,created:Date.now()};
+    if(due) row.due=due;
+    if(gform) row.gform=gform;
+    qzs.push(row);
+    DB.s('quizzes',qzs);
+    toast('Quiz published! 🚀','ok');
+    swSec('qz');
+  });
+  $('btn-cancel-create').addEventListener('click',()=>swSec('qz'));
+ // Save New Password Only (Grok key removed)
+$('btn-save-pass').addEventListener('click', () => {
+  const p = rawVal('se-pass');
+
+  if (!p) {
+    toast('Please enter a new password', 'err');
+    return;
+  }
+
+  const ads = DB.g('admins') || [];
+  const i = ads.findIndex(a => a.email === curAdmin?.email);
+  if (i !== -1) {
+    ads[i].pass = p;
+    DB.s('admins', ads);
+    if (curAdmin) curAdmin.pass = p;
+    toast('✅ Password updated successfully!', 'ok');
+  }
+
+  $('se-pass').value = '';
+});
+  $('qcontainer').addEventListener('click',e=>{
+    const btn=e.target.closest('[data-rmq]');
+    if(btn){document.querySelector(`[data-uid="${btn.dataset.rmq}"]`)?.remove();updCnt();}
+  });
+  document.querySelectorAll('.ov').forEach(ov=>{
+    ov.addEventListener('click',e=>{if(e.target===ov&&ov.id!=='m-score')closeOv(ov.id);});
+  });
+
+  buildChips();
+  checkBanner();
+});
+</script>
+</body>
+</html>

@@ -1390,23 +1390,7 @@ async function callGrokAPI(prompt) {
     return data;
 }
 
-  if (!response.ok) {
-  const err = await response.text();
-  throw new Error(`Groq API error ${response.status}: ${err}`);
-}
-
-const data = await response.json();
-let text = data.choices[0].message.content.trim();
-
-if (text.startsWith('```json')) {
-  text = text.replace(/```json\n?/, '').replace(/```$/, '').trim();
-}
-
-if (text.startsWith('```')) {
-  text = text.replace(/```\n?/, '').replace(/```$/, '').trim();
-}
-
-return JSON.parse(text);
+  
 
 
 // ──────────────────────────────────────────────────────────────

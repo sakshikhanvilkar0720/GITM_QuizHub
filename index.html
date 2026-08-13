@@ -1390,9 +1390,6 @@ async function callGrokAPI(prompt) {
     return data;
 }
 
-  
-
-
 // ──────────────────────────────────────────────────────────────
 
 function openOv(id){
@@ -1425,27 +1422,71 @@ function buildChips(){
 
 let curStu=null;
 
-function stuLogin(){
-  const name=val('sname'), roll=val('sroll');
-  if(!name){toast('Please enter your name','err');return;}
-  if(!roll){toast('Please enter your roll number','err');return;}
-  curStu={name,roll};
-  const s=DB.g('students')||[];
-  if(!s.find(x=>x.roll===roll)){s.push({name,roll,joined:Date.now()});DB.s('students',s);}
-  $('s-tname').textContent=name;
-  $('s-troll').textContent=roll;
-  $('s-av').textContent=name[0].toUpperCase();
-  const h=new Date().getHours();
-  const greet=h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night';
-  $('s-welcome').textContent=`${greet}, ${name}! 👋`;
-  $('tip-text').textContent=TIPS[new Date().getDate()%TIPS.length];
-  activeSub=null;
-  buildChips();
-  renderStuQuizzes();
-  stuTab('home');
-  refreshStats();
-  goTo('pg-stu-dash');
-  toast(`Welcome, ${name}!`,'ok');
+async function stuLogin() {
+    const name = val('sname');
+    const roll = val('sroll');
+
+    if (!name) {
+        toast('Please enter your name', 'err');
+        return;
+    }
+
+    if (!roll) {
+        toast('Please enter your roll number', 'err');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/students', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                roll: roll
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Could not save student');
+        }
+
+        curStu = {
+            name: data.student.name,
+            roll: data.student.roll
+        };
+
+        $('s-tname').textContent = curStu.name;
+        $('s-troll').textContent = curStu.roll;
+        $('s-av').textContent = curStu.name[0].toUpperCase();
+
+        const h = new Date().getHours();
+        const greet =
+            h < 12 ? 'Good morning' :
+            h < 17 ? 'Good afternoon' :
+            h < 21 ? 'Good evening' :
+            'Good night';
+
+        $('s-welcome').textContent = `${greet}, ${curStu.name}! 👋`;
+        $('tip-text').textContent =
+            TIPS[new Date().getDate() % TIPS.length];
+
+        activeSub = null;
+        buildChips();
+        renderStuQuizzes();
+        stuTab('home');
+        refreshStats();
+        goTo('pg-stu-dash');
+
+        toast(`Welcome, ${curStu.name}!`, 'ok');
+
+    } catch (error) {
+        console.error(error);
+        toast(error.message || 'Unable to connect to database', 'err');
+    }
 }
 
 function refreshStats(){

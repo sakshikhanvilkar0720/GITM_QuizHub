@@ -1900,21 +1900,120 @@ function swSec(sec){
 
 function refreshAdmin(){renderOv();renderQz();renderRs();renderSt();}
 
-function renderOv(){
-  const qzs=DB.g('quizzes')||[], rs=DB.g('results')||[], sts=DB.g('students')||[];
-  const avg=rs.length?Math.round(rs.reduce((a,r)=>a+r.pct,0)/rs.length):0;
-  $('a-stats').innerHTML=`
-    <div class="asc" style="--clr:var(--ac)"><div class="asv">${qzs.length}</div><div class="asl">Quizzes</div></div>
-    <div class="asc" style="--clr:var(--ac2)"><div class="asv">${rs.length}</div><div class="asl">Submissions</div></div>
-    <div class="asc" style="--clr:var(--grn)"><div class="asv">${sts.length}</div><div class="asl">Students</div></div>
-    <div class="asc" style="--clr:var(--red)"><div class="asv">${avg}%</div><div class="asl">Avg Score</div></div>`;
-  const rec=[...rs].reverse().slice(0,6);
-  $('a-recent').innerHTML=rec.length?rec.map(r=>`
-    <div class="qrow">
-      <div class="qri"><h4>${r.student} <span style="color:var(--tx2);font-weight:400;font-size:11px;">#${r.roll}</span></h4>
-        <p>${r.quiz} · ${r.subject} · ${r.date}</p></div>
-      <span class="tag ${r.passed?'tgreen':'tred'}">${r.pct}%</span>
-    </div>`).join(''):`<div class="empty"><div class="ei">📊</div><p>No activity yet</p></div>`;
+async function renderOv() {
+    const stats = $('a-stats');
+
+    stats.innerHTML = `
+        <div class="asc" style="--clr:var(--ac)">
+            <div class="asv">...</div>
+            <div class="asl">Quizzes</div>
+        </div>
+
+        <div class="asc" style="--clr:var(--ac2)">
+            <div class="asv">...</div>
+            <div class="asl">Submissions</div>
+        </div>
+
+        <div class="asc" style="--clr:var(--grn)">
+            <div class="asv">...</div>
+            <div class="asl">Students</div>
+        </div>
+
+        <div class="asc" style="--clr:var(--ac3)">
+            <div class="asv">...</div>
+            <div class="asl">Average Score</div>
+        </div>
+    `;
+
+    try {
+        // Get students from MongoDB
+        const studentsResponse = await fetch('/api/students');
+        const studentsData = await studentsResponse.json();
+
+        if (!studentsResponse.ok) {
+            throw new Error(
+                studentsData.error || 'Failed to load students'
+            );
+        }
+
+        // Get results from MongoDB
+        const resultsResponse = await fetch('/api/results');
+        const resultsData = await resultsResponse.json();
+
+        if (!resultsResponse.ok) {
+            throw new Error(
+                resultsData.error || 'Failed to load results'
+            );
+        }
+
+        const students = Array.isArray(studentsData)
+            ? studentsData
+            : [];
+
+        const results = Array.isArray(resultsData)
+            ? resultsData
+            : [];
+
+        // Keep quiz count from the existing quiz system
+        const quizzes = DB.g('quizzes') || [];
+
+        const average = results.length
+            ? Math.round(
+                results.reduce(
+                    (sum, r) => sum + Number(r.pct || 0),
+                    0
+                ) / results.length
+            )
+            : 0;
+
+        stats.innerHTML = `
+            <div class="asc" style="--clr:var(--ac)">
+                <div class="asv">${quizzes.length}</div>
+                <div class="asl">Quizzes</div>
+            </div>
+
+            <div class="asc" style="--clr:var(--ac2)">
+                <div class="asv">${results.length}</div>
+                <div class="asl">Submissions</div>
+            </div>
+
+            <div class="asc" style="--clr:var(--grn)">
+                <div class="asv">${students.length}</div>
+                <div class="asl">Students</div>
+            </div>
+
+            <div class="asc" style="--clr:var(--ac3)">
+                <div class="asv">${average}%</div>
+                <div class="asl">Average Score</div>
+            </div>
+        `;
+
+    } catch (error) {
+
+        console.error('Admin statistics error:', error);
+
+        stats.innerHTML = `
+            <div class="asc" style="--clr:var(--ac)">
+                <div class="asv">—</div>
+                <div class="asl">Quizzes</div>
+            </div>
+
+            <div class="asc" style="--clr:var(--ac2)">
+                <div class="asv">—</div>
+                <div class="asl">Submissions</div>
+            </div>
+
+            <div class="asc" style="--clr:var(--grn)">
+                <div class="asv">—</div>
+                <div class="asl">Students</div>
+            </div>
+
+            <div class="asc" style="--clr:var(--ac3)">
+                <div class="asv">—</div>
+                <div class="asl">Average Score</div>
+            </div>
+        `;
+    }
 }
 
 function renderQz(){
@@ -2020,14 +2119,107 @@ async function renderRs() {
     }
 }
 
-function renderSt(){
-  const sts=DB.g('students')||[], rs=DB.g('results')||[];
-  $('a-students').innerHTML=sts.length?sts.map(s=>{
-    const sr=rs.filter(r=>r.roll===s.roll);
-    const avg=sr.length?Math.round(sr.reduce((a,r)=>a+r.pct,0)/sr.length):'-';
-    return `<tr><td>${s.name}</td><td style="font-family:'Space Mono',monospace;font-size:11px;">${s.roll}</td>
-      <td>${sr.length}</td><td>${avg}${avg!=='-'?'%':''}</td></tr>`;
-  }).join(''):`<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--tx2);">No students yet</td></tr>`;
+async function renderSt() {
+    const table = $('a-students');
+
+    table.innerHTML = `
+        <tr>
+            <td colspan="4" style="text-align:center;padding:32px;color:var(--tx2);">
+                Loading students...
+            </td>
+        </tr>
+    `;
+
+    try {
+        // Get students from MongoDB
+        const studentsResponse = await fetch('/api/students');
+
+        const studentsData = await studentsResponse.json();
+
+        if (!studentsResponse.ok) {
+            throw new Error(
+                studentsData.error || 'Failed to load students'
+            );
+        }
+
+        // Get results from MongoDB
+        const resultsResponse = await fetch('/api/results');
+
+        const resultsData = await resultsResponse.json();
+
+        if (!resultsResponse.ok) {
+            throw new Error(
+                resultsData.error || 'Failed to load results'
+            );
+        }
+
+        const students = Array.isArray(studentsData)
+            ? studentsData
+            : [];
+
+        const results = Array.isArray(resultsData)
+            ? resultsData
+            : [];
+
+        if (!students.length) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="4"
+                        style="text-align:center;padding:32px;color:var(--tx2);">
+                        No students registered yet
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        table.innerHTML = students.map(student => {
+
+            const studentResults = results.filter(
+                r => r.roll === student.roll
+            );
+
+            const average = studentResults.length
+                ? Math.round(
+                    studentResults.reduce(
+                        (sum, r) => sum + Number(r.pct || 0),
+                        0
+                    ) / studentResults.length
+                )
+                : '-';
+
+            return `
+                <tr>
+                    <td>${student.name || ''}</td>
+
+                    <td style="font-family:'Space Mono',monospace;font-size:11px;">
+                        ${student.roll || ''}
+                    </td>
+
+                    <td>
+                        ${studentResults.length}
+                    </td>
+
+                    <td>
+                        ${average === '-' ? '-' : average + '%'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+
+        console.error('Load students error:', error);
+
+        table.innerHTML = `
+            <tr>
+                <td colspan="4"
+                    style="text-align:center;padding:32px;color:var(--red);">
+                    Failed to load students
+                </td>
+            </tr>
+        `;
+    }
 }
 
 let assignId=null, assignSel=[];

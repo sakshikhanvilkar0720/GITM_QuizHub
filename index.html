@@ -1931,21 +1931,93 @@ function renderQz(){
     </div>`).join(''):`<div class="empty"><div class="ei">📝</div><p>No quizzes yet.</p></div>`;
 }
 
-function renderRs(){
-  const rs=DB.g('results')||[];
-  $('a-results').innerHTML=rs.length?[...rs].reverse().map(r=>`
-    <tr>
-      <td>${r.student}</td><td style="font-family:'Space Mono',monospace;font-size:11px;">${r.roll}</td>
-      <td>${r.quiz}</td><td><span class="tag tblue">${r.subject}</span></td>
-      <td><div style="display:flex;align-items:center;gap:7px;">
-        <span style="font-weight:700;color:${r.passed?'var(--grn)':'var(--red)'};">${r.pct}%</span>
-        <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;min-width:45px;">
-          <div style="height:100%;width:${r.pct}%;background:${r.passed?'var(--grn)':'var(--red)'};border-radius:2px;"></div>
-        </div>
-      </div></td>
-      <td style="color:var(--tx2);font-size:12px;">${r.date}</td>
-      <td><button class="btn bs bsm" data-view-res="${r.id}">View</button></td>
-    </tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--tx2);">No results yet</td></tr>`;
+async function renderRs() {
+    const table = $('a-results');
+
+    table.innerHTML = `
+        <tr>
+            <td colspan="7" style="text-align:center;padding:32px;color:var(--tx2);">
+                Loading results...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch('/api/results');
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load results');
+        }
+
+        const rs = Array.isArray(data) ? data : [];
+
+        if (!rs.length) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:32px;color:var(--tx2);">
+                        No results yet
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        table.innerHTML = rs.map(r => `
+            <tr>
+                <td>${r.student || ''}</td>
+
+                <td style="font-family:'Space Mono',monospace;font-size:11px;">
+                    ${r.roll || ''}
+                </td>
+
+                <td>${r.quiz || ''}</td>
+
+                <td>
+                    <span class="tag tblue">
+                        ${r.subject || ''}
+                    </span>
+                </td>
+
+                <td>
+                    <div style="display:flex;align-items:center;gap:7px;">
+                        <span style="font-weight:700;color:${r.passed ? 'var(--grn)' : 'var(--red)'};">
+                            ${r.pct ?? 0}%
+                        </span>
+                        <span style="font-size:11px;color:var(--tx2);">
+                            ${r.score ?? 0}/${r.total ?? 0}
+                        </span>
+                    </div>
+                </td>
+
+                <td>
+                    ${r.date
+                        ? new Date(r.date).toLocaleDateString()
+                        : ''}
+                </td>
+
+                <td>
+                    <button
+                        class="btn bs bsm"
+                        data-view-res="${r._id || ''}">
+                        View
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (error) {
+        console.error('Load results error:', error);
+
+        table.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;padding:32px;color:var(--red);">
+                    Failed to load results
+                </td>
+            </tr>
+        `;
+    }
 }
 
 function renderSt(){
@@ -2203,23 +2275,91 @@ document.addEventListener('DOMContentLoaded',()=>{
     else if(aBtn) openAssign(aBtn.dataset.assign);
     else if(dBtn) openDel(dBtn.dataset.del);
   });
-  $('a-results').addEventListener('click',e=>{
-    const vBtn=e.target.closest('[data-view-res]');
-    if(vBtn){
-      const r=(DB.g('results')||[]).find(x=>x.id===vBtn.dataset.viewRes);
-      if(r){
-        $('rdet').innerHTML=`
-          <div class="detrow"><span>Student</span><strong>${r.student}</strong></div>
-          <div class="detrow"><span>Roll</span><strong>${r.roll}</strong></div>
-          <div class="detrow"><span>Quiz</span><strong>${r.quiz}</strong></div>
-          <div class="detrow"><span>Subject</span><strong>${r.subject}</strong></div>
-          <div class="detrow"><span>Score</span><strong>${r.score}/${r.total} (${r.pct}%)</strong></div>
-          <div class="detrow"><span>Status</span><span class="tag ${r.passed?'tgreen':'tred'}">${r.passed?'Passed':'Failed'}</span></div>
-          <div class="detrow"><span>Date</span><strong>${r.date}</strong></div>`;
+  $('a-results').addEventListener('click', async e => {
+
+    const vBtn = e.target.closest('[data-view-res]');
+
+    if (!vBtn) return;
+
+    const resultId = vBtn.dataset.viewRes;
+
+    try {
+
+        const response = await fetch('/api/results');
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load result');
+        }
+
+        const r = data.find(
+            x => String(x._id) === String(resultId)
+        );
+
+        if (!r) {
+            toast('Result not found', 'err');
+            return;
+        }
+
+        $('rdet').innerHTML = `
+            <div class="detrow">
+                <span>Student</span>
+                <strong>${r.student || ''}</strong>
+            </div>
+
+            <div class="detrow">
+                <span>Roll</span>
+                <strong>${r.roll || ''}</strong>
+            </div>
+
+            <div class="detrow">
+                <span>Quiz</span>
+                <strong>${r.quiz || ''}</strong>
+            </div>
+
+            <div class="detrow">
+                <span>Subject</span>
+                <strong>${r.subject || ''}</strong>
+            </div>
+
+            <div class="detrow">
+                <span>Score</span>
+                <strong>
+                    ${r.score ?? 0}/${r.total ?? 0}
+                    (${r.pct ?? 0}%)
+                </strong>
+            </div>
+
+            <div class="detrow">
+                <span>Status</span>
+                <span class="tag ${r.passed ? 'tgreen' : 'tred'}">
+                    ${r.passed ? 'Passed' : 'Failed'}
+                </span>
+            </div>
+
+            <div class="detrow">
+                <span>Date</span>
+                <strong>
+                    ${r.date
+                        ? new Date(r.date).toLocaleDateString()
+                        : ''}
+                </strong>
+            </div>
+        `;
+
         openOv('m-result');
-      }
+
+    } catch (error) {
+
+        console.error('View result error:', error);
+
+        toast(
+            error.message || 'Failed to load result',
+            'err'
+        );
     }
-  });
+});
   $('btn-close-result').addEventListener('click',()=>closeOv('m-result'));
   $('assign-chips').addEventListener('click',e=>{
     const chip=e.target.closest('.achip');

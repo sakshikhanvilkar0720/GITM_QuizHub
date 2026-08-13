@@ -1738,22 +1738,67 @@ function tickT(){
   $('qa-timer').className='tbox'+(QS.t<60?' red':'');
 }
 
-function submitQuiz(){
-  clearInterval(QS.ti);
-  const {qz,ans}=QS;
-  const score=ans.reduce((a,x,i)=>x===qz.questions[i].ans?a+1:a,0);
-  const tot=qz.questions.length, pct=Math.round(score/tot*100), passed=pct>=qz.pass;
-  const rs=DB.g('results')||[];
-  rs.push({id:'r'+Date.now(),student:curStu.name,roll:curStu.roll,
-    quiz:qz.title,quizId:qz.id,subject:qz.subject,score,total:tot,pct,passed,
-    date:new Date().toLocaleDateString()});
-  DB.s('results',rs);
-  $('sc-emoji').textContent=passed?'🎉':'📚';
-  $('sc-frac').textContent=`${score}/${tot}`;
-  $('sc-pct').textContent=`${pct}% correct`;
-  $('sc-msg').textContent=passed?'Congratulations! You passed! 🌟':'Keep practising — you can do it!';
-  $('sc-msg').style.color=passed?'var(--grn)':'var(--red)';
-  openOv('m-score');
+async function submitQuiz() {
+    clearInterval(QS.ti);
+
+    const { qz, ans } = QS;
+
+    const score = ans.reduce(
+        (a, x, i) => x === qz.questions[i].ans ? a + 1 : a,
+        0
+    );
+
+    const tot = qz.questions.length;
+    const pct = Math.round(score / tot * 100);
+    const passed = pct >= qz.pass;
+
+    try {
+        const response = await fetch('/api/results', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                student: curStu.name,
+                roll: curStu.roll,
+                quiz: qz.title,
+                quizId: qz.id,
+                subject: qz.subject,
+                score: score,
+                total: tot,
+                pct: pct,
+                passed: passed
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to save result');
+        }
+
+        // Display score
+        $('sc-emoji').textContent = passed ? '🎉' : '📚';
+        $('sc-frac').textContent = `${score}/${tot}`;
+        $('sc-pct').textContent = `${pct}% correct`;
+        $('sc-msg').textContent =
+            passed
+                ? 'Congratulations! You passed! 🌟'
+                : 'Keep practising — you can do it!';
+
+        $('sc-msg').style.color =
+            passed ? 'var(--grn)' : 'var(--red)';
+
+        openOv('m-score');
+
+    } catch (error) {
+        console.error('Result save error:', error);
+
+        toast(
+            error.message || 'Failed to save result',
+            'err'
+        );
+    }
 }
 
 let curAdmin=null;

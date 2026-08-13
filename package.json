@@ -1,0 +1,23 @@
+{
+  "name": "quizhub",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sakshikhanvilkar0720/GITM_QuizHub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sakshikhanvilkar0720/GITM_QuizHub/issues"
+  },
+  "homepage": "https://github.com/sakshikhanvilkar0720/GITM_QuizHub#readme",
+  "dependencies": {
+    "mongodb": "^7.5.0"
+  }
+}
